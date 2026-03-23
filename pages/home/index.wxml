@@ -1,0 +1,200 @@
+<view class="page-container {{(!isLogin || !hasPartner) ? 'no-scroll' : ''}}">
+  <!-- 1. 未登录状态 -->
+  <block wx:if="{{!isLogin}}">
+    <view class="empty-content">
+      <view class="illustration-box">
+        <view class="icon-users-placeholder"></view>
+      </view>
+      <view class="empty-title">欢迎开启共读之旅</view>
+      <view class="empty-desc">登录后即可生成你的共读码，与 TA 开始同步阅读</view>
+      <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+    </view>
+  </block>
+
+  <!-- 2. 已登录但未绑定伙伴 -->
+  <block wx:elif="{{isLogin && !hasPartner}}">
+    <view class="empty-content">
+      <view class="illustration-box">
+        <view class="icon-users-placeholder"></view>
+      </view>
+      <view class="empty-title">寻找你的共读伙伴</view>
+      <view class="empty-desc">您还未绑定伙伴，快去寻找书搭子一起共读吧！</view>
+
+      <button class="btn-primary w-full" bindtap="onGoToPartner">
+        去结伴
+      </button>
+    </view>
+  </block>
+
+  <!-- 3. 已绑定伙伴但无书 -->
+  <block wx:elif="{{hasPartner && !currentBook}}">
+    <view class="container">
+      <!-- 伙伴关系卡 -->
+      <view class="card partner-status-card">
+        <view class="partner-row">
+          <view class="user-info">
+            <image class="avatar me-avatar" src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+            <view class="nickname">我 · {{user.nickname || '书友'}}</view>
+          </view>
+          <view class="status-badge">已绑定</view>
+          <view class="user-info">
+            <image class="avatar partner-avatar" src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+            <view class="nickname">{{partner.nickname || '伙伴'}}</view>
+          </view>
+        </view>
+        <view class="unbind-btn" bindtap="onTapManagePair">解绑伙伴</view>
+      </view>
+
+      <!-- 空书架引导 -->
+      <view class="empty-shelf">
+        <view class="illustration-box-small">
+          <view class="icon-book-placeholder"></view>
+        </view>
+        <view class="empty-title-small">还没有正在共读的书</view>
+        <view class="empty-desc">添加一本开始共读吧</view>
+        <button class="btn-primary btn-add-book" bindtap="onTapAddBook">+ 添加一本</button>
+      </view>
+    </view>
+  </block>
+
+  <!-- 4. 正常共读状态 -->
+  <block wx:else>
+    <view class="container">
+      <!-- 顶部书籍信息 (非卡片) -->
+      <view class="book-header-section">
+        <view class="book-cover-large">
+          <image src="{{currentBook.cover_url || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=200&q=80'}}" mode="aspectFill"></image>
+        </view>
+        <view class="book-detail-large">
+          <view class="status-tag-text">正在共读</view>
+          <view class="book-title-large">{{currentBook.title}}</view>
+          <view class="book-author-large">{{currentBook.author || '作者未填写'}}</view>
+          <view class="book-meta-tags">
+            <view class="meta-tag-green">第{{currentBook.reading_days || 1}}天</view>
+            <view class="meta-tag-gray">共{{currentBook.total_pages}}页</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 阅读进度卡片 -->
+      <view class="card progress-card">
+        <view class="progress-header">
+          <text class="progress-title">阅读进度</text>
+          <text class="progress-diff">{{currentBook.progress_summary}}</text>
+        </view>
+        
+        <view class="progress-track-group">
+          <!-- 我的进度条 -->
+          <view class="progress-track-single">
+            <view class="progress-track-bg me-bg-light"></view>
+            <view class="progress-bar-me" style="width: {{currentBook.my_progress_percent}}%">
+              <view class="marker-avatar-embedded">
+                <image src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+              </view>
+            </view>
+          </view>
+
+          <!-- 伙伴进度条 -->
+          <view class="progress-track-single">
+            <view class="progress-track-bg partner-bg-light"></view>
+            <view class="progress-bar-partner" style="width: {{currentBook.partner_progress_percent}}%">
+              <view class="marker-avatar-embedded">
+                <image src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 引导文案 -->
+        <view class="quote-text-bottom">
+          <text>{{currentBook.progress_tip || '他在昨天晚上读到了第50页呢，快追上他吧！'}}</text>
+        </view>
+      </view>
+
+      <!-- 共读笔记区域 -->
+      <view class="notes-section">
+        <view class="notes-header">
+          <view class="notes-title-group">
+            <text class="notes-title">共读笔记</text>
+            <text class="notes-count">({{currentBook.notes_count || 0}})</text>
+          </view>
+          <view class="write-note-btn" catchtap="onTapWriteNote">
+            <view class="icon-edit"></view>
+            <text>写笔记</text>
+          </view>
+        </view>
+        
+        <view class="notes-list">
+          <view class="empty-notes-tip" wx:if="{{!currentBook.latest_notes.length}}">
+            还没有笔记，快去记录第一条想法吧
+          </view>
+          <block wx:else>
+            <view class="note-card" wx:for="{{currentBook.latest_notes}}" wx:key="id">
+              <view class="note-card-header">
+                <view class="note-user-info">
+                  <image class="note-avatar-small" src="{{item.user_avatar}}" mode="aspectFill"></image>
+                  <text class="note-user-name">{{item.user_nickname}}</text>
+                </view>
+                <view class="note-page-tag {{item.is_me ? 'me-tag' : 'partner-tag'}}">第{{item.page_no}}页</view>
+              </view>
+              <view class="note-content-text">{{item.content}}</view>
+            </view>
+          </block>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 添加书籍弹窗 -->
+  <view class="modal-overlay" wx:if="{{showBookPopup}}" bindtap="onCloseBookPopup">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header-line"></view>
+      <view class="modal-padding">
+        <view class="modal-header">
+          <text class="modal-title">添加正在共读的书</text>
+          <view class="close-icon" bindtap="onCloseBookPopup">×</view>
+        </view>
+        
+        <view class="form-group">
+          <input class="form-input" data-field="title" placeholder="请输入书名" value="{{bookForm.title}}" bindinput="onBookFieldInput" />
+          <input class="form-input" data-field="author" placeholder="请输入作者（选填）" value="{{bookForm.author}}" bindinput="onBookFieldInput" />
+          <input class="form-input" type="number" data-field="total_pages" placeholder="请输入总页数" value="{{bookForm.total_pages}}" bindinput="onBookFieldInput" />
+        </view>
+
+        <button class="btn-primary modal-submit" loading="{{bookSubmitting}}" bindtap="onSubmitBook">
+          开始共读
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 记一笔弹窗 -->
+  <view class="modal-overlay" wx:if="{{showNotePopup}}" bindtap="onCloseNotePopup">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header-line"></view>
+      <view class="modal-padding">
+        <view class="modal-header">
+          <text class="modal-title">更新你的进度</text>
+          <view class="close-icon" bindtap="onCloseNotePopup">×</view>
+        </view>
+        <view class="note-subtitle">伙伴已读到 <text class="partner-text">{{currentBook.partner_progress || 0}}</text> 页</view>
+        
+        <view class="form-group">
+          <view class="page-input-box">
+            <input class="page-input" type="number" placeholder="{{currentBook.my_progress || 0}}" value="{{noteForm.page}}" bindinput="onNotePageInput" />
+            <text class="page-total">/ {{currentBook.total_pages}}</text>
+          </view>
+          <textarea class="note-textarea" placeholder="在这里记录此刻的想法..." value="{{noteForm.content}}" bindinput="onNoteContentInput"></textarea>
+          <view class="warning-box" wx:if="{{noteForm.page > currentBook.partner_progress}}">
+            <view class="icon-alert"></view>
+            <text class="warning-text">你已超过伙伴进度，笔记将被锁定。</text>
+          </view>
+        </view>
+
+        <button class="btn-primary modal-submit" loading="{{noteSubmitting}}" bindtap="onSubmitNote">
+          同步给伙伴
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

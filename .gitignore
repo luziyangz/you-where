@@ -1,0 +1,54 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+ENV/
+env/
+*.db
+*.sqlite3
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.history/
+
+# WeChat Mini Program
+miniprogram_npm/
+node_modules/
+project.private.config.json
+
+# Local config & sensitive files
+.env
+.env.local
+.env.*.local
+*.log
+dist/
+build/
+
+# Project specific
+backend/data/app.db
+backend/__pycache__/
+backend/.pytest_cache/
+.cursor/
+.agents/
+.trae/
+*.xlsx
+*.png
+file/ui/

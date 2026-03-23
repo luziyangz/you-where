@@ -1,0 +1,216 @@
+<view class="page-container">
+  <!-- 顶部导航 -->
+  <view class="glass-nav">
+    <view class="flex items-center gap-2">
+      <view class="nav-indicator"></view>
+      <text class="nav-title">你在哪页</text>
+    </view>
+    <view class="nav-more">
+      <view class="dot-icon"></view>
+    </view>
+  </view>
+
+  <block wx:if="{{!book}}">
+    <view class="empty-content">
+      <view class="illustration-box">
+        <view class="icon-book-placeholder"></view>
+      </view>
+      <view class="empty-title">还没有正在共读的书</view>
+      <view class="empty-desc">先去首页添加一本书，再开始记录页码和想法吧。</view>
+      <button class="btn-primary w-full" bindtap="onBackHome">返回首页</button>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="container">
+      <!-- 书籍进度卡片 -->
+      <view class="card book-progress-card">
+        <view class="book-header">
+          <view class="book-main">
+            <view class="status-tag">正在共读</view>
+            <view class="book-title">{{book.title}}</view>
+            <view class="book-author">{{book.author || '作者未填写'}}</view>
+          </view>
+          <view class="book-meta">
+            <text class="reading-days">第{{book.reading_days || 1}}天</text>
+            <text class="total-pages">共{{book.total_pages}}页</text>
+          </view>
+        </view>
+
+        <view class="progress-section">
+          <view class="progress-header">
+            <text class="progress-title">阅读进度</text>
+            <text class="progress-diff">{{book.progress_summary}}</text>
+          </view>
+          
+          <view class="progress-track">
+            <view class="progress-bar-partner" style="width: {{book.partner_progress_percent}}%"></view>
+            <view class="progress-bar-me" style="width: {{book.my_progress_percent}}%"></view>
+            
+            <view class="progress-marker" style="left: {{book.my_progress_percent}}%">
+              <view class="marker-avatar me-border">
+                <image src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+              </view>
+              <view class="marker-label me-text">{{book.my_progress}}页</view>
+            </view>
+
+            <view class="progress-marker" style="left: {{book.partner_progress_percent}}%">
+              <view class="marker-avatar partner-border">
+                <image src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+              </view>
+              <view class="marker-label partner-text">{{book.partner_progress}}页</view>
+            </view>
+          </view>
+        </view>
+
+        <view class="finish-status-box">
+          <view class="finish-chip {{book.my_finished ? 'done' : ''}}">
+            我{{book.my_finished ? '已读完' : '未读完'}}
+          </view>
+          <view class="finish-chip {{book.partner_finished ? 'done' : ''}}">
+            伙伴{{book.partner_finished ? '已读完' : '未读完'}}
+          </view>
+        </view>
+        <view class="finish-tip" wx:if="{{book.my_finished && !book.partner_finished}}">
+          你已读完，等待伙伴完成后会自动归档到已读完列表
+        </view>
+        <view class="finish-tip success" wx:if="{{book.my_finished && book.partner_finished}}">
+          双方均已读完，本书将自动归档
+        </view>
+      </view>
+
+      <!-- 共读笔记流 -->
+      <view class="section-header">
+        <view class="flex items-center gap-2">
+          <text class="section-title">共读笔记</text>
+          <text class="count-tag">({{entries.length}})</text>
+        </view>
+        <view class="header-actions">
+          <view class="locate-btn" wx:if="{{unreadCount > 0}}" bindtap="onLocateNextUnread">定位未读</view>
+          <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}条新动态</view>
+        </view>
+      </view>
+
+      <scroll-view class="notes-stream" scroll-y enhanced scroll-with-animation scroll-into-view="{{scrollIntoViewId}}">
+        <block wx:if="{{entries.length === 0}}">
+          <view class="empty-notes">
+            <text>还没有任何想法，点击下方按钮记一笔吧</text>
+          </view>
+        </block>
+
+        <block wx:for="{{entries}}" wx:key="entry_id">
+          <view id="entry-{{item.entry_id}}" class="note-card {{item.is_mine ? 'note-me' : 'note-partner'}}">
+            <view class="note-header">
+              <view class="note-user-info">
+                <image class="note-avatar" src="{{item.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+                <view class="note-meta">
+                  <text class="note-username">{{item.nickname}}</text>
+                  <text class="note-page {{item.is_mine ? 'me-text' : 'partner-text'}}">第{{item.page}}页</text>
+                </view>
+              </view>
+              <text class="note-time">{{item.created_at}}</text>
+            </view>
+
+            <view class="note-content-box {{item.is_locked ? 'note-locked' : ''}}" 
+                  bindtap="onTapEntryBody" 
+                  data-page="{{item.unlock_at_page}}" 
+                  data-is-locked="{{item.is_locked}}">
+              <block wx:if="{{item.is_locked}}">
+                <view class="lock-icon-box">
+                  <view class="icon-lock"></view>
+                </view>
+                <view class="lock-text">内容已锁定</view>
+                <view class="lock-hint">读到第 {{item.unlock_at_page}} 页即可解锁，避免被提前剧透。</view>
+              </block>
+              <block wx:else>
+                <text class="note-text">{{item.note_content || '这一页没有写笔记内容，只更新了进度。'}}</text>
+              </block>
+            </view>
+
+            <!-- 回复列表 -->
+            <block wx:if="{{!item.is_locked}}">
+              <view class="note-footer">
+                <view class="reply-btn" bindtap="onOpenReplyPopup" data-entry-id="{{item.entry_id}}">
+                  <view class="icon-reply"></view>
+                  <text>回复</text>
+                </view>
+              </view>
+              
+              <view class="replies-list" wx:if="{{item.replies && item.replies.length > 0}}">
+                <view class="reply-item" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="reply_id">
+                  <text class="reply-user">{{reply.nickname}}：</text>
+                  <text class="reply-content">{{reply.content}}</text>
+                </view>
+              </view>
+            </block>
+          </view>
+        </block>
+      </scroll-view>
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="bottom-action-bar">
+      <button class="btn-primary action-btn" bindtap="onOpenComposer">
+        <view class="icon-plus-white"></view>
+        <text>记一笔 / 更新进度</text>
+      </button>
+    </view>
+  </block>
+
+  <!-- 记一笔弹窗 -->
+  <view class="modal-overlay" wx:if="{{showComposer}}" bindtap="onCloseComposer">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header-line"></view>
+      <view class="modal-padding">
+        <view class="modal-header">
+          <text class="modal-title">更新你的进度</text>
+          <view class="close-icon" bindtap="onCloseComposer">×</view>
+        </view>
+        
+        <view class="composer-form">
+          <view class="page-input-box">
+            <view class="input-row">
+              <input class="page-input" type="number" data-field="page" placeholder="{{book.my_progress || 0}}" value="{{entryForm.page}}" bindinput="onEntryFieldInput" />
+              <text class="total-pages-label">/ {{book.total_pages}}</text>
+            </view>
+          </view>
+
+          <textarea class="note-textarea" data-field="note_content" maxlength="200" placeholder="在这里记录此刻的想法..." value="{{entryForm.note_content}}" bindinput="onEntryFieldInput"></textarea>
+          
+          <view class="finish-checkbox {{entryForm.mark_finished ? 'checked' : ''}}" bindtap="onToggleFinished">
+            <view class="checkbox-icon"></view>
+            <text>我已读完本书</text>
+          </view>
+
+          <view class="lock-warning" wx:if="{{entryForm.page > book.partner_progress}}">
+            <view class="icon-alert"></view>
+            <text>你已超过伙伴进度，笔记将被锁定。</text>
+          </view>
+        </view>
+
+        <button class="btn-primary modal-submit" loading="{{entrySubmitting}}" bindtap="onSubmitEntry">
+          同步给伙伴
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 回复弹窗 -->
+  <view class="modal-overlay" wx:if="{{showReplyPopup}}" bindtap="onCloseReplyPopup">
+    <view class="modal-content" catchtap="true">
+      <view class="modal-header-line"></view>
+      <view class="modal-padding">
+        <view class="modal-header">
+          <text class="modal-title">回复想法</text>
+          <view class="close-icon" bindtap="onCloseReplyPopup">×</view>
+        </view>
+        
+        <textarea class="reply-textarea" maxlength="200" placeholder="输入回复内容..." value="{{replyContent}}" bindinput="onReplyInput"></textarea>
+
+        <button class="btn-primary modal-submit" loading="{{replySubmitting}}" bindtap="onSubmitReply">
+          发送回复
+        </button>
+      </view>
+    </view>
+  </view>
+</view>

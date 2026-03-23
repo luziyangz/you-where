@@ -1,0 +1,44 @@
+{
+  "pages": [
+    "pages/home/index",
+    "pages/progress/index",
+    "pages/profile/index",
+    "pages/settings/index",
+    "pages/partner/index",
+    "pages/bookstore/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "你在哪页",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f7f7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#999999",
+    "selectedColor": "#07c160",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/partner/index",
+        "text": "伙伴"
+      },
+      {
+        "pagePath": "pages/home/index",
+        "text": "共读"
+      },
+      {
+        "pagePath": "pages/bookstore/index",
+        "text": "书城"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

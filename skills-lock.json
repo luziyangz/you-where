@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "prd-to-plan": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "computedHash": "b602c684d70f1a27bce4d9db8fe5cca15e2923c083d6e4e6eda9d3fc0895afed"
+    }
+  }
+}

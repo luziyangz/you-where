@@ -1,0 +1,36 @@
+<view class="container">
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input-box">
+      <icon type="search" size="16" color="#999" />
+      <input class="search-input" placeholder="搜索书名、作者" confirm-type="search" />
+    </view>
+  </view>
+
+  <!-- 分类导航 -->
+  <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
+    <view class="category-list">
+      <view 
+        class="category-item {{activeCategory === index ? 'active' : ''}}" 
+        wx:for="{{categories}}" 
+        wx:key="*this"
+        data-index="{{index}}"
+        bindtap="onCategoryTap"
+      >
+        {{item}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 书籍列表 -->
+  <view class="book-list">
+    <view class="book-item" wx:for="{{books}}" wx:key="id" data-id="{{item.id}}" bindtap="onBookTap">
+      <image class="book-cover" src="{{item.cover}}" mode="aspectFill"></image>
+      <view class="book-info">
+        <view class="book-title">{{item.title}}</view>
+        <view class="book-author">{{item.author}}</view>
+        <view class="book-desc">{{item.desc}}</view>
+      </view>
+    </view>
+  </view>
+</view>

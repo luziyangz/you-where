@@ -1,0 +1,85 @@
+<view class="container">
+  <!-- 未绑定状态：结伴 -->
+  <block wx:if="{{!hasPartner}}">
+    <view class="unbound-container">
+      <view class="header-text">寻找你的书搭子</view>
+      <view class="sub-text">一起共读，分享感悟</view>
+
+      <view class="invite-box">
+        <input
+          class="invite-input"
+          placeholder="输入对方的 6 位共读码"
+          value="{{inviteCode}}"
+          bindinput="onInputInviteCode"
+          maxlength="6"
+          type="number"
+        />
+        <button class="bind-btn" loading="{{bindLoading}}" bindtap="bindPartner">绑定</button>
+      </view>
+
+      <view class="divider">
+        <view class="line"></view>
+        <text>或</text>
+        <view class="line"></view>
+      </view>
+
+      <button class="scan-btn" bindtap="scanToBind">
+        <text class="scan-icon">📷</text> 扫一扫绑定
+      </button>
+
+      <!-- 显示自己的共读码，方便对方输入 -->
+      <view class="my-code-box" wx:if="{{myNickname}}">
+        <text class="my-code-label">我的共读码</text>
+        <text class="my-code-value">{{myJoinCode}}</text>
+        <text class="my-code-hint">把这个号码发给你的书搭子</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 已绑定状态：伙伴 -->
+  <block wx:else>
+    <view class="bound-container">
+      <view class="avatars-wrapper">
+        <!-- 我的头像 -->
+        <block wx:if="{{myAvatar}}">
+          <image class="avatar" src="{{myAvatar}}" mode="aspectFill"></image>
+        </block>
+        <block wx:else>
+          <view class="avatar avatar-text">{{myNickname ? myNickname[0] : '我'}}</view>
+        </block>
+
+        <view class="heart-icon">❤️</view>
+
+        <!-- 伙伴头像 -->
+        <block wx:if="{{partnerAvatar}}">
+          <image class="avatar" src="{{partnerAvatar}}" mode="aspectFill"></image>
+        </block>
+        <block wx:else>
+          <view class="avatar avatar-text">{{partnerNickname ? partnerNickname[0] : '伴'}}</view>
+        </block>
+      </view>
+
+      <view class="partner-names">
+        <text class="name-label">{{myNickname || '我'}}</text>
+        <text class="name-sep"> & </text>
+        <text class="name-label">{{partnerNickname || '书友'}}</text>
+      </view>
+
+      <view class="days-text">我们已结伴共读</view>
+      <view class="days-count"><text class="num">{{bindDays}}</text> 天</view>
+
+      <view class="stats-box">
+        <view class="stat-item">
+          <view class="stat-num">{{sharedBooks}}</view>
+          <view class="stat-label">共同阅读</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-num">{{sharedNotes}}</view>
+          <view class="stat-label">交流笔记</view>
+        </view>
+      </view>
+
+      <button class="unbind-btn" loading="{{unbindLoading}}" bindtap="unbindPartner">解除绑定</button>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,32 @@
+<view class="page-container">
+  <view class="settings-list">
+    <view class="setting-item" bindtap="onTapPrivacy">
+      <view class="setting-icon bg-purple">
+        <view class="icon-shield"></view>
+      </view>
+      <view class="setting-text">隐私政策</view>
+      <view class="arrow-right"></view>
+    </view>
+    
+    <view class="setting-item" bindtap="onTapAgreement">
+      <view class="setting-icon bg-indigo">
+        <view class="icon-file"></view>
+      </view>
+      <view class="setting-text">用户协议</view>
+      <view class="arrow-right"></view>
+    </view>
+    
+    <view class="setting-item" bindtap="onTapAbout">
+      <view class="setting-icon bg-pink">
+        <view class="icon-info"></view>
+      </view>
+      <view class="setting-text">关于我们</view>
+      <view class="arrow-right"></view>
+    </view>
+  </view>
+
+  <view class="version-info">
+    <view class="version-label">当前版本</view>
+    <view class="version-number">v1.0.0</view>
+  </view>
+</view>

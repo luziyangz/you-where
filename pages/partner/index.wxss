@@ -1,0 +1,275 @@
+.container {
+  min-height: 100vh;
+  background-color: #f7f7f7;
+  padding: 40rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 移除 justify-content: center 让内容偏上一点，避免被底部 tabbar 遮挡太多 */
+  padding-top: 10vh;
+}
+
+/* 未绑定状态 */
+.unbound-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 80rpx 50rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.04);
+  box-sizing: border-box;
+}
+
+.header-text {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.sub-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 80rpx;
+}
+
+.invite-box {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 50rpx;
+}
+
+.invite-input {
+  flex: 1;
+  height: 96rpx;
+  background: #f8f9fa;
+  border-radius: 48rpx 0 0 48rpx;
+  padding: 0 40rpx;
+  font-size: 30rpx;
+  color: #333;
+}
+
+.bind-btn {
+  width: 180rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  background: #07c160;
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-radius: 0 48rpx 48rpx 0;
+  margin: 0;
+  padding: 0;
+}
+
+.bind-btn::after {
+  border: none;
+}
+
+.divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin-bottom: 50rpx;
+}
+
+.line {
+  flex: 1;
+  height: 1rpx;
+  background: #eee;
+}
+
+.divider text {
+  margin: 0 30rpx;
+  color: #ccc;
+  font-size: 24rpx;
+}
+
+.scan-btn {
+  width: 100%;
+  height: 96rpx;
+  line-height: 96rpx;
+  background: #fff;
+  color: #333;
+  font-size: 32rpx;
+  font-weight: 500;
+  border-radius: 48rpx;
+  border: 2rpx solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 60rpx;
+}
+
+.scan-icon {
+  margin-right: 12rpx;
+  font-size: 36rpx;
+}
+
+.my-code-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20rpx;
+  padding: 40rpx;
+  background: #f8f9fa;
+  border-radius: 24rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.my-code-label {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+
+.my-code-value {
+  font-size: 56rpx;
+  font-weight: bold;
+  color: #07c160;
+  letter-spacing: 4rpx;
+  margin-bottom: 12rpx;
+}
+
+.my-code-hint {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 已绑定状态 */
+.bound-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border-radius: 32rpx;
+  padding: 80rpx 50rpx;
+  box-shadow: 0 8rpx 30rpx rgba(0,0,0,0.04);
+  box-sizing: border-box;
+}
+
+.avatars-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40rpx;
+}
+
+.avatar {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 50%;
+  border: 6rpx solid #fff;
+  box-shadow: 0 8rpx 20rpx rgba(0,0,0,0.08);
+}
+
+.avatar-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e8f8f0;
+  color: #07c160;
+  font-size: 56rpx;
+  font-weight: bold;
+}
+
+.partner-names {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24rpx;
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+}
+
+.name-sep {
+  margin: 0 16rpx;
+  color: #999;
+  font-weight: normal;
+}
+
+.heart-icon {
+  font-size: 48rpx;
+  margin: 0 40rpx;
+  animation: heartbeat 1.5s infinite;
+}
+
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.days-text {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+}
+
+.days-count {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 60rpx;
+  display: flex;
+  align-items: baseline;
+}
+
+.days-count .num {
+  font-size: 72rpx;
+  font-weight: bold;
+  color: #07c160;
+  margin-right: 8rpx;
+  line-height: 1;
+}
+
+.stats-box {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 80rpx;
+  padding: 40rpx 0;
+  background: #f8f9fa;
+  border-radius: 24rpx;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+
+.stat-label {
+  font-size: 26rpx;
+  color: #999;
+}
+
+.unbind-btn {
+  width: 80%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: #fff;
+  color: #ff4d4f;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 44rpx;
+  border: 2rpx solid #ff4d4f;
+}
+
+.unbind-btn::after {
+  border: none;
+}

@@ -1,0 +1,109 @@
+<view class="page-container">
+  <block wx:if="{{!isLogin}}">
+    <view class="empty-content">
+      <view class="illustration-box">
+        <view class="icon-user-placeholder"></view>
+      </view>
+      <view class="empty-title">登录后查看成就</view>
+      <view class="empty-desc">你可以查看累计读过书籍、累计页数和累计笔记。</view>
+      <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="container">
+      <!-- 个人信息卡 -->
+      <view class="user-card">
+        <view class="avatar-box">
+          <block wx:if="{{user.avatar}}">
+            <image class="profile-avatar" src="{{user.avatar}}" mode="aspectFill"></image>
+          </block>
+          <block wx:else>
+            <view class="profile-avatar avatar-text-fallback">{{user.nickname ? user.nickname[0] : ''}}</view>
+          </block>
+        </view>
+        <view class="user-info">
+          <view class="nickname">{{user.nickname || '书友'}}</view>
+          <view class="join-days">加入共读的第 {{user.join_days || 1}} 天</view>
+        </view>
+      </view>
+
+      <!-- 我的共读伙伴卡片 (如果有伙伴才显示) -->
+      <view class="partner-badge-card" wx:if="{{user.partner}}">
+        <view class="partner-info">
+          <block wx:if="{{user.partner.avatar}}">
+            <image class="partner-avatar-small" src="{{user.partner.avatar}}" mode="aspectFill"></image>
+          </block>
+          <block wx:else>
+            <view class="partner-avatar-small avatar-text-fallback-small">{{user.partner.nickname ? user.partner.nickname[0] : '伴'}}</view>
+          </block>
+          <view class="partner-detail">
+            <text class="partner-label">我的共读伙伴</text>
+            <text class="partner-name">{{user.partner.nickname}}</text>
+          </view>
+        </view>
+        <view class="status-tag-mini">共读中</view>
+      </view>
+
+      <!-- 成就数据 -->
+      <view class="stats-section">
+        <view class="stat-item">
+          <view class="stat-value">
+            <text class="num">{{stats.total_days || 1}}</text>
+            <text class="unit">天</text>
+          </view>
+          <view class="stat-label">共读天数</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-value">
+            <text class="num">{{stats.total_books || 0}}</text>
+            <text class="unit">本</text>
+          </view>
+          <view class="stat-label">已读完</view>
+        </view>
+        <view class="stat-item">
+          <view class="stat-value">
+            <text class="num">{{stats.total_entries || 0}}</text>
+            <text class="unit">条</text>
+          </view>
+          <view class="stat-label">累计笔记</view>
+        </view>
+      </view>
+
+      <!-- 设置列表 -->
+      <view class="settings-card">
+        <view class="setting-item">
+          <view class="setting-icon bg-green">
+            <view class="icon-history"></view>
+          </view>
+          <view class="setting-text">阅读历史</view>
+          <view class="arrow-right"></view>
+        </view>
+        <view class="setting-item">
+          <view class="setting-icon bg-yellow">
+            <view class="icon-trophy"></view>
+          </view>
+          <view class="setting-text">共读目标</view>
+          <view class="arrow-right"></view>
+        </view>
+        <view class="setting-item">
+          <view class="setting-icon bg-blue">
+            <view class="icon-bell"></view>
+          </view>
+          <view class="setting-text">打卡提醒</view>
+          <view class="arrow-right"></view>
+        </view>
+        <view class="setting-item no-border" bindtap="onTapSettings">
+          <view class="setting-icon bg-gray">
+            <view class="icon-settings"></view>
+          </view>
+          <view class="setting-text">系统设置</view>
+          <view class="arrow-right"></view>
+        </view>
+      </view>
+
+      <!-- 退出登录按钮 -->
+      <view class="logout-btn" bindtap="onTapLogout">退出登录</view>
+    </view>
+  </block>
+</view>

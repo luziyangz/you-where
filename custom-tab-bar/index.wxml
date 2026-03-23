@@ -1,0 +1,27 @@
+<view class="tab-bar">
+  <view class="tab-bar-item" data-path="{{list[0].pagePath}}" data-index="0" bindtap="switchTab">
+    <view class="icon {{selected === 0 ? list[0].activeIcon : list[0].icon}}"></view>
+    <view class="text {{selected === 0 ? 'active' : ''}}">{{list[0].text}}</view>
+  </view>
+  
+  <view class="tab-bar-item" data-path="{{list[1].pagePath}}" data-index="1" bindtap="switchTab">
+    <view class="icon {{selected === 1 ? list[1].activeIcon : list[1].icon}}"></view>
+    <view class="text {{selected === 1 ? 'active' : ''}}">{{list[1].text}}</view>
+  </view>
+
+  <view class="tab-bar-center" bindtap="onCenterBtnClick">
+    <view class="center-btn">
+      <view class="icon-pen-white"></view>
+    </view>
+  </view>
+  
+  <view class="tab-bar-item" data-path="{{list[2].pagePath}}" data-index="2" bindtap="switchTab">
+    <view class="icon {{selected === 2 ? list[2].activeIcon : list[2].icon}}"></view>
+    <view class="text {{selected === 2 ? 'active' : ''}}">{{list[2].text}}</view>
+  </view>
+
+  <view class="tab-bar-item" data-path="{{list[3].pagePath}}" data-index="3" bindtap="switchTab">
+    <view class="icon {{selected === 3 ? list[3].activeIcon : list[3].icon}}"></view>
+    <view class="text {{selected === 3 ? 'active' : ''}}">{{list[3].text}}</view>
+  </view>
+</view>
