@@ -51,4 +51,7 @@ backend/.pytest_cache/
 .trae/
 *.xlsx
 *.png
-file/ui/
+file/
+ui.html
+ui_final.html
+docs/
