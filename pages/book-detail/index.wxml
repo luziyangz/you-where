@@ -1,0 +1,47 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="card">
+    <view class="title">正在加载...</view>
+  </view>
+
+  <view wx:elif="{{book}}" class="card">
+    <view class="header">
+      <image wx:if="{{book.cover_url}}" class="cover" mode="aspectFill" src="{{book.cover_url}}" />
+      <view class="meta">
+        <view class="title">{{book.title}}</view>
+        <view class="author">{{book.author || '作者未知'}}</view>
+        <view class="desc">
+          {{book.language ? ('语言：' + book.language + ' ｜ ') : ''}}{{book.has_text ? '可在线阅读（公版）' : '暂无正文'}}
+        </view>
+        <view wx:if="{{book.total_pages}}" class="desc">预计总页数：{{book.total_pages}}</view>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="btn" bindtap="onStartRead" disabled="{{!book.has_text}}">开始阅读</button>
+      <button class="btn primary" bindtap="onAddToPair" loading="{{adding}}" disabled="{{!book.has_text}}">加入共读</button>
+    </view>
+
+    <view class="intro" wx:if="{{book.intro}}">
+      <view class="section-title">书籍简介</view>
+      <view class="intro-text">{{book.intro}}</view>
+    </view>
+
+    <view class="reviews" wx:if="{{book.quality_reviews && book.quality_reviews.length}}">
+      <view class="section-title">优质评价</view>
+      <view wx:for="{{book.quality_reviews}}" wx:key="index" class="review-item">
+        <view class="review-head">
+          <text class="reviewer">{{item.reviewer || '匿名读者'}}</text>
+          <text class="rating">评分 {{item.rating || '--'}}</text>
+          <text class="quality-level" wx:if="{{item.quality_level}}">{{item.quality_level}}</text>
+        </view>
+        <view class="review-content">{{item.content}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="card">
+    <view class="title">未找到书籍</view>
+    <view class="desc">请返回书城重新搜索</view>
+  </view>
+</view>
+

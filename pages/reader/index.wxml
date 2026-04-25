@@ -1,0 +1,30 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="card">
+    <view class="title">正在加载正文...</view>
+    <view class="desc">首次打开会稍慢一些（需要拉取并缓存公版正文）</view>
+  </view>
+
+  <view wx:elif="{{pageData}}" class="reader">
+    <view class="top">
+      <view class="book-title">{{pageData.title}}</view>
+      <view class="book-author">{{pageData.author}}</view>
+      <view class="pager">第 {{pageData.page}} / {{pageData.total_pages}} 页</view>
+    </view>
+
+    <scroll-view class="content" scroll-y enhanced>
+      <text class="text">{{pageData.content}}</text>
+    </scroll-view>
+
+    <view class="bottom">
+      <button class="btn" bindtap="onPrev" disabled="{{pageData.page <= 1}}">上一页</button>
+      <button class="btn primary" bindtap="onSyncProgress" loading="{{syncing}}">同步进度</button>
+      <button class="btn" bindtap="onNext" disabled="{{pageData.page >= pageData.total_pages}}">下一页</button>
+    </view>
+  </view>
+
+  <view wx:else class="card">
+    <view class="title">无法打开阅读</view>
+    <view class="desc">该书可能暂无可用正文</view>
+  </view>
+</view>
+

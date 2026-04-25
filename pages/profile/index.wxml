@@ -23,8 +23,33 @@
           </block>
         </view>
         <view class="user-info">
-          <view class="nickname">{{user.nickname || '书友'}}</view>
+          <view class="nickname-row">
+            <view class="nickname">{{user.nickname || '书友'}}</view>
+            <view class="nickname-edit-icon" bindtap="onTapEditNickname">✎</view>
+          </view>
           <view class="join-days">加入共读的第 {{user.join_days || 1}} 天</view>
+          <view class="join-code-row" bindtap="onCopyJoinCode">
+            <text class="join-code-label">共读码</text>
+            <text class="join-code-value">{{user.join_code || '--'}}</text>
+            <text class="join-code-copy">复制</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="nickname-editor-mask" wx:if="{{editingNickname}}" bindtap="onCancelEditNickname">
+        <view class="nickname-editor" catchtap="noop">
+          <view class="nickname-editor-title">修改昵称</view>
+          <input
+            class="nickname-editor-input"
+            value="{{nicknameDraft}}"
+            maxlength="64"
+            bindinput="onNicknameInput"
+            placeholder="请输入新的昵称"
+          />
+          <view class="nickname-editor-actions">
+            <button class="nickname-editor-cancel" bindtap="onCancelEditNickname">取消</button>
+            <button class="nickname-editor-save" loading="{{savingNickname}}" bindtap="onSaveNickname">保存</button>
+          </view>
         </view>
       </view>
 
@@ -72,21 +97,21 @@
 
       <!-- 设置列表 -->
       <view class="settings-card">
-        <view class="setting-item">
+        <view class="setting-item" bindtap="onTapReadingHistory">
           <view class="setting-icon bg-green">
             <view class="icon-history"></view>
           </view>
           <view class="setting-text">阅读历史</view>
           <view class="arrow-right"></view>
         </view>
-        <view class="setting-item">
+        <view class="setting-item" bindtap="onTapReadingGoal">
           <view class="setting-icon bg-yellow">
             <view class="icon-trophy"></view>
           </view>
           <view class="setting-text">共读目标</view>
           <view class="arrow-right"></view>
         </view>
-        <view class="setting-item">
+        <view class="setting-item" bindtap="onTapReminder">
           <view class="setting-icon bg-blue">
             <view class="icon-bell"></view>
           </view>

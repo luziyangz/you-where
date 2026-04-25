@@ -391,6 +391,22 @@
 .reply-user { font-weight: bold; color: #666666; }
 .reply-content { color: #333333; }
 
+.load-more-wrap {
+  padding: 12rpx 0 20rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-load-more {
+  width: 240rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #07C160;
+  background: #EBFAF1;
+}
+
 /* 底部操作栏 */
 .bottom-action-bar {
   position: fixed;

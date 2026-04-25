@@ -49,14 +49,14 @@
             
             <view class="progress-marker" style="left: {{book.my_progress_percent}}%">
               <view class="marker-avatar me-border">
-                <image src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+                <image src="{{user.avatar || 'https://picsum.photos/seed/yx_me/120/120'}}" mode="aspectFill"></image>
               </view>
               <view class="marker-label me-text">{{book.my_progress}}页</view>
             </view>
 
             <view class="progress-marker" style="left: {{book.partner_progress_percent}}%">
               <view class="marker-avatar partner-border">
-                <image src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+                <image src="{{partner.avatar || 'https://picsum.photos/seed/yx_partner/120/120'}}" mode="aspectFill"></image>
               </view>
               <view class="marker-label partner-text">{{book.partner_progress}}页</view>
             </view>
@@ -145,6 +145,9 @@
             </block>
           </view>
         </block>
+        <view class="load-more-wrap" wx:if="{{entryHasMore}}">
+          <button class="btn-load-more" loading="{{entryLoadingMore}}" bindtap="onLoadMoreEntries">加载更多</button>
+        </view>
       </scroll-view>
     </view>
 
@@ -159,7 +162,7 @@
 
   <!-- 记一笔弹窗 -->
   <view class="modal-overlay" wx:if="{{showComposer}}" bindtap="onCloseComposer">
-    <view class="modal-content" catchtap="true">
+    <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">
@@ -197,7 +200,7 @@
 
   <!-- 回复弹窗 -->
   <view class="modal-overlay" wx:if="{{showReplyPopup}}" bindtap="onCloseReplyPopup">
-    <view class="modal-content" catchtap="true">
+    <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">

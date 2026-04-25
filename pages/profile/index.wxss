@@ -95,18 +95,128 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  flex: 1;
 }
 
 .nickname {
   font-size: 36rpx;
   font-weight: bold;
   color: #333333;
+}
+
+.nickname-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
   margin-bottom: 8rpx;
+}
+
+.nickname-edit-icon {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  border: 1rpx solid rgba(7, 193, 96, 0.35);
+  background: rgba(7, 193, 96, 0.08);
+  color: #07C160;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
 .join-days {
   font-size: 24rpx;
   color: #CCCCCC;
+}
+
+.join-code-row {
+  margin-top: 10rpx;
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.join-code-label {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.join-code-value {
+  font-size: 24rpx;
+  color: #333333;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
+.join-code-copy {
+  font-size: 20rpx;
+  color: #07C160;
+}
+
+.nickname-editor-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx;
+  box-sizing: border-box;
+}
+
+.nickname-editor {
+  width: 100%;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 30rpx;
+  box-sizing: border-box;
+}
+
+.nickname-editor-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 20rpx;
+}
+
+.nickname-editor-input {
+  height: 84rpx;
+  border: 1rpx solid #E5E7EB;
+  border-radius: 16rpx;
+  padding: 0 22rpx;
+  font-size: 28rpx;
+  color: #222;
+}
+
+.nickname-editor-actions {
+  margin-top: 22rpx;
+  display: flex;
+  gap: 18rpx;
+}
+
+.nickname-editor-cancel,
+.nickname-editor-save {
+  flex: 1;
+  height: 76rpx;
+  line-height: 76rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+}
+
+.nickname-editor-cancel {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.nickname-editor-save {
+  background: #07C160;
+  color: #fff;
 }
 
 /* 成就数据 */

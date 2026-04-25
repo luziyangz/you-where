@@ -1,0 +1,91 @@
+.container {
+  min-height: 100vh;
+  background: #f7f7f7;
+  padding: 24rpx 24rpx 24rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 10rpx;
+}
+
+.desc {
+  font-size: 24rpx;
+  color: #888;
+  line-height: 1.6;
+}
+
+.reader {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48rpx);
+}
+
+.top {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 22rpx 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+
+.book-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #222;
+}
+
+.book-author {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.pager {
+  margin-top: 10rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.content {
+  flex: 1;
+  margin-top: 18rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+
+.text {
+  font-size: 28rpx;
+  color: #222;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bottom {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 18rpx;
+}
+
+.btn {
+  flex: 1;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+}
+
+.primary {
+  background: #07c160;
+  color: #fff;
+}
+

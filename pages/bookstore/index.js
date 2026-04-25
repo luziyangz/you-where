@@ -1,30 +1,15 @@
+const { storeSearchBooks } = require('../../services/api');
+const { formatApiError } = require('../../utils/copywriting');
+
+const app = getApp();
+
 Page({
   data: {
-    categories: ['推荐', '小说', '文学', '心理学', '历史', '传记'],
-    activeCategory: 0,
-    books: [
-      {
-        id: 1,
-        title: '百年孤独',
-        author: '加西亚·马尔克斯',
-        cover: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=200&q=80',
-        desc: '魔幻现实主义代表作，展现了布恩迪亚家族七代人的传奇故事。'
-      },
-      {
-        id: 2,
-        title: '人类简史',
-        author: '尤瓦尔·赫拉利',
-        cover: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&w=200&q=80',
-        desc: '从十万年前有生命迹象开始到21世纪资本、科技交织的人类发展史。'
-      },
-      {
-        id: 3,
-        title: '三体',
-        author: '刘慈欣',
-        cover: 'https://images.unsplash.com/photo-1614165936126-22485f58c4ee?auto=format&fit=crop&w=200&q=80',
-        desc: '中国科幻文学的里程碑之作，讲述了地球人类文明和三体文明的信息交流、生死搏杀及两个文明在宇宙中的兴衰历程。'
-      }
-    ]
+    keyword: '',
+    loading: false,
+    books: [],
+    page: 1,
+    hasMore: true
   },
 
   onShow() {
@@ -33,21 +18,116 @@ Page({
         selected: 2
       });
     }
+    // 进入书城默认加载热门公版书（不要求登录）
+    this.setData({ books: [], page: 1, hasMore: true }, () => {
+      this.loadPopular(true);
+    });
   },
 
-  onCategoryTap(e) {
-    const index = e.currentTarget.dataset.index;
-    this.setData({
-      activeCategory: index
+  onPullDownRefresh() {
+    const keyword = (this.data.keyword || '').trim();
+    const task = keyword ? this.searchBooks(true) : this.loadPopular(true);
+    Promise.resolve(task).finally(() => {
+      wx.stopPullDownRefresh();
     });
-    // 这里可以添加请求不同分类书籍的逻辑
+  },
+
+  onReachBottom() {
+    const keyword = (this.data.keyword || '').trim();
+    if (keyword) {
+      this.searchBooks(false);
+      return;
+    }
+    this.loadPopular(false);
+  },
+
+  onKeywordInput(e) {
+    this.setData({
+      keyword: (e.detail.value || '').trim()
+    });
+  },
+
+  onSearchConfirm() {
+    this.searchBooks(true);
+  },
+
+  async loadPopular(reset = false) {
+    if (!reset && !this.data.hasMore) {
+      return;
+    }
+    const nextPage = reset ? 1 : Number(this.data.page || 1);
+    this.setData({ loading: true });
+    try {
+      // query 为空时后端返回热门/最近缓存
+      const payload = await storeSearchBooks('', nextPage);
+      const newBooks = payload.books || [];
+      const merged = reset ? newBooks : [...(this.data.books || []), ...newBooks];
+      this.setData({
+        books: merged,
+        page: nextPage + 1,
+        hasMore: newBooks.length >= 20
+      });
+      if (reset && Number(payload.network_synced_count || 0) > 0) {
+        wx.showToast({
+          title: `已从网络更新 ${payload.network_synced_count} 本`,
+          icon: 'none'
+        });
+      }
+    } catch (error) {
+      wx.showToast({
+        title: formatApiError(error, '加载书籍失败'),
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  async searchBooks(reset = false) {
+    const query = (this.data.keyword || '').trim();
+    if (!query) {
+      wx.showToast({ title: '请输入书名或作者', icon: 'none' });
+      return;
+    }
+
+    if (!reset && !this.data.hasMore) {
+      return;
+    }
+
+    const nextPage = reset ? 1 : Number(this.data.page || 1);
+    this.setData({ loading: true });
+    try {
+      const payload = await storeSearchBooks(query, nextPage);
+      const newBooks = payload.books || [];
+      const merged = reset ? newBooks : [...(this.data.books || []), ...newBooks];
+      this.setData({
+        books: merged,
+        page: nextPage + 1,
+        hasMore: newBooks.length >= 20
+      });
+      if (reset && Number(payload.network_synced_count || 0) > 0) {
+        wx.showToast({
+          title: `已从网络更新 ${payload.network_synced_count} 本`,
+          icon: 'none'
+        });
+      }
+    } catch (error) {
+      wx.showToast({
+        title: formatApiError(error, '加载书籍失败'),
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ loading: false });
+    }
   },
 
   onBookTap(e) {
-    const bookId = e.currentTarget.dataset.id;
-    wx.showToast({
-      title: '书籍详情开发中',
-      icon: 'none'
+    const catalogId = e.currentTarget.dataset.id || '';
+    if (!catalogId) {
+      return;
+    }
+    wx.navigateTo({
+      url: `/pages/book-detail/index?catalog_id=${encodeURIComponent(catalogId)}`
     });
   }
 });

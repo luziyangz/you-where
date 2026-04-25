@@ -1,0 +1,19 @@
+<view class="page">
+  <view class="card">
+    <view class="title">关于我们</view>
+    <view class="subtitle">让共读变得更简单</view>
+
+    <view wx:for="{{sections}}" wx:key="id" class="section">
+      <view class="section-title">{{item.title}}</view>
+      <view class="paragraph">{{item.content}}</view>
+    </view>
+
+    <view class="section-title">联系方式</view>
+    <view class="contact-row">
+      <view class="paragraph">邮箱：{{meta.contactEmail}}</view>
+      <view class="copy-btn" bindtap="onCopyEmail">复制</view>
+    </view>
+    <view class="paragraph">{{meta.serviceTime}}</view>
+    <view class="updated">版本：v1.0.0 ｜ 更新时间：{{meta.updatedAt}}</view>
+  </view>
+</view>

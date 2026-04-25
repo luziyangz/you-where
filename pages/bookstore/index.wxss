@@ -121,3 +121,24 @@
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
+
+.book-review {
+  margin-bottom: 14rpx;
+  font-size: 24rpx;
+  color: #4b5563;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.book-review-tag {
+  display: inline-block;
+  margin-right: 8rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  color: #047857;
+  background: #d1fae5;
+}

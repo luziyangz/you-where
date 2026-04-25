@@ -11,6 +11,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
+from urllib.request import Request as UrlRequest
 from urllib.request import urlopen
 
 from contextlib import asynccontextmanager
@@ -82,10 +83,17 @@ class BindPayload(BaseModel):
     join_code: str = Field(..., min_length=6, max_length=6)
 
 
-class BookPayload(BaseModel):
-    title:       str = Field(..., min_length=1, max_length=100)
-    author:      str = Field("",  max_length=100)
-    total_pages: int = Field(..., ge=1, le=50000)
+class CreateBookPayload(BaseModel):
+    """
+    创建共读书籍：
+    - 真实书源：传 catalog_id（服务端会校验可读正文并计算总页数）
+    - 兼容旧模式：手动传 title/author/total_pages
+    """
+
+    catalog_id: Optional[str] = Field(None, min_length=1, max_length=64)
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    author: str = Field("", max_length=100)
+    total_pages: Optional[int] = Field(None, ge=1, le=50000)
 
 
 class EntryPayload(BaseModel):
@@ -98,6 +106,10 @@ class EntryPayload(BaseModel):
 
 class ReplyPayload(BaseModel):
     content: str = Field(..., min_length=1, max_length=200)
+
+
+class ReadEntriesPayload(BaseModel):
+    last_entry_id: Optional[str] = None
 
 
 # ─────────────────────────── 工具函数 ────────────────────────────
@@ -186,6 +198,32 @@ def ensure_db() -> None:
             finished_at TEXT
         );
 
+        -- ── 书城书目表（公版书源）──────────────────────────────────
+        CREATE TABLE IF NOT EXISTS catalog_books (
+            catalog_id     TEXT PRIMARY KEY,
+            source         TEXT NOT NULL,
+            source_book_id TEXT NOT NULL,
+            title          TEXT NOT NULL,
+            author         TEXT NOT NULL DEFAULT '',
+            language       TEXT NOT NULL DEFAULT '',
+            cover_url      TEXT NOT NULL DEFAULT '',
+            detail_url     TEXT NOT NULL DEFAULT '',
+            text_url       TEXT NOT NULL DEFAULT '',
+            created_at     TEXT NOT NULL,
+            updated_at     TEXT NOT NULL
+        );
+
+        -- ── 书籍正文缓存（纯文本）──────────────────────────────────
+        CREATE TABLE IF NOT EXISTS catalog_contents (
+            catalog_id        TEXT PRIMARY KEY,
+            content_text      TEXT NOT NULL,
+            content_len       INTEGER NOT NULL,
+            page_size_chars   INTEGER NOT NULL,
+            total_pages       INTEGER NOT NULL,
+            etag              TEXT,
+            last_fetched_at   TEXT NOT NULL
+        );
+
         -- ── 阅读记录/笔记表 ──────────────────────────────────────
         CREATE TABLE IF NOT EXISTS entries (
             entry_id          TEXT PRIMARY KEY,
@@ -225,9 +263,23 @@ def ensure_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_entries_book_time ON entries(book_id, created_at DESC);
         CREATE INDEX IF NOT EXISTS idx_entries_client_req ON entries(book_id, user_id, client_request_id);
         CREATE INDEX IF NOT EXISTS idx_replies_entry     ON replies(entry_id, created_at);
+        CREATE INDEX IF NOT EXISTS idx_catalog_books_title  ON catalog_books(title);
+        CREATE INDEX IF NOT EXISTS idx_catalog_books_author ON catalog_books(author);
         """
     )
     conn.commit()
+
+    # ── 兼容迁移：为 books 表补充 catalog_id 字段（旧库上不存在时才添加） ──
+    try:
+        cols = conn.execute("PRAGMA table_info(books)").fetchall()
+        col_names = {row["name"] for row in cols}
+        if "catalog_id" not in col_names:
+            conn.execute("ALTER TABLE books ADD COLUMN catalog_id TEXT")
+            conn.commit()
+    except Exception as exc:
+        # 不阻塞启动：字段迁移失败仅记录日志
+        logger.warning("books 表添加 catalog_id 失败：%s", exc)
+
     conn.close()
     logger.info("数据库初始化完成，路径：%s", DB_PATH)
 
@@ -383,6 +435,164 @@ def finalize_book_if_finished(
         logger.info("书籍 %s 已被双方读完，自动归档", book_row["book_id"])
 
 
+# ─────────────────────────── 书城（catalog）封装 ───────────────────────────
+
+CATALOG_SOURCE_GUTENDEX = "gutendex"
+CATALOG_PAGE_SIZE_CHARS = 1200  # 阅读页 = 固定字符数分页，保证双方一致
+
+
+def make_catalog_id(source: str, source_book_id: str) -> str:
+    return f"{source}_{source_book_id}"
+
+
+def _safe_str(value: Any, max_len: int = 200) -> str:
+    s = (value or "").strip() if isinstance(value, str) else str(value or "")
+    s = s.replace("\u0000", "")
+    return s[:max_len]
+
+
+def upsert_catalog_book_from_gutendex(conn: sqlite3.Connection, gut_book: Dict[str, Any]) -> Dict[str, Any]:
+    source_book_id = str(gut_book.get("id") or "").strip()
+    if not source_book_id.isdigit():
+        raise ApiError(50042, "外部书源数据异常（缺少 id）", 500)
+
+    title = _safe_str(gut_book.get("title") or "", 200)
+    if not title:
+        raise ApiError(50043, "外部书源数据异常（缺少 title）", 500)
+
+    authors = gut_book.get("authors") or []
+    author_name = ""
+    if isinstance(authors, list) and authors:
+        author_name = _safe_str((authors[0] or {}).get("name") or "", 200)
+
+    languages = gut_book.get("languages") or []
+    language = ""
+    if isinstance(languages, list) and languages:
+        language = _safe_str(languages[0] or "", 16)
+
+    formats = gut_book.get("formats") or {}
+    text_url = _gutendex_pick_text_url(formats if isinstance(formats, dict) else {}) or ""
+
+    cover_url = ""
+    if isinstance(formats, dict):
+        cover_url = _safe_str(formats.get("image/jpeg") or "", 512)
+
+    detail_url = f"https://www.gutenberg.org/ebooks/{source_book_id}"
+    catalog_id = make_catalog_id(CATALOG_SOURCE_GUTENDEX, source_book_id)
+    now = utc_now()
+
+    conn.execute(
+        """
+        INSERT INTO catalog_books
+        (catalog_id, source, source_book_id, title, author, language, cover_url, detail_url, text_url, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(catalog_id) DO UPDATE SET
+          title=excluded.title,
+          author=excluded.author,
+          language=excluded.language,
+          cover_url=excluded.cover_url,
+          detail_url=excluded.detail_url,
+          text_url=excluded.text_url,
+          updated_at=excluded.updated_at
+        """,
+        (
+            catalog_id,
+            CATALOG_SOURCE_GUTENDEX,
+            source_book_id,
+            title,
+            author_name,
+            language,
+            cover_url,
+            detail_url,
+            text_url,
+            now,
+            now,
+        ),
+    )
+    conn.commit()
+
+    return {
+        "catalog_id": catalog_id,
+        "source": CATALOG_SOURCE_GUTENDEX,
+        "source_book_id": source_book_id,
+        "title": title,
+        "author": author_name,
+        "language": language,
+        "cover_url": cover_url,
+        "detail_url": detail_url,
+        "text_url": text_url,
+    }
+
+
+def get_catalog_book(conn: sqlite3.Connection, catalog_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute("SELECT * FROM catalog_books WHERE catalog_id = ?", (catalog_id,)).fetchone()
+
+
+def get_or_fetch_catalog_book(conn: sqlite3.Connection, catalog_id: str) -> sqlite3.Row:
+    row = get_catalog_book(conn, catalog_id)
+    if row:
+        return row
+
+    # 目前仅支持 gutendex_* 的 catalog_id
+    if not catalog_id.startswith(f"{CATALOG_SOURCE_GUTENDEX}_"):
+        raise ApiError(40431, "书城书籍不存在", 404)
+    source_book_id = catalog_id.split("_", 1)[1]
+    gut_book = gutendex_get_book(source_book_id)
+    upsert_catalog_book_from_gutendex(conn, gut_book)
+    row2 = get_catalog_book(conn, catalog_id)
+    if not row2:
+        raise ApiError(50044, "书城入库失败", 500)
+    return row2
+
+
+def get_catalog_content(conn: sqlite3.Connection, catalog_id: str) -> Optional[sqlite3.Row]:
+    return conn.execute("SELECT * FROM catalog_contents WHERE catalog_id = ?", (catalog_id,)).fetchone()
+
+
+def cache_catalog_content(conn: sqlite3.Connection, catalog_id: str, text: str) -> sqlite3.Row:
+    clean = (text or "").replace("\r\n", "\n").replace("\r", "\n")
+    clean = clean.strip("\ufeff")  # 移除 BOM（避免分页错位）
+    content_len = len(clean)
+    if content_len < 200:
+        raise ApiError(50045, "正文内容过短，暂不支持在线阅读", 500)
+
+    page_size = CATALOG_PAGE_SIZE_CHARS
+    total_pages = max(1, (content_len + page_size - 1) // page_size)
+    now = utc_now()
+    conn.execute(
+        """
+        INSERT INTO catalog_contents
+        (catalog_id, content_text, content_len, page_size_chars, total_pages, etag, last_fetched_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(catalog_id) DO UPDATE SET
+          content_text=excluded.content_text,
+          content_len=excluded.content_len,
+          page_size_chars=excluded.page_size_chars,
+          total_pages=excluded.total_pages,
+          last_fetched_at=excluded.last_fetched_at
+        """,
+        (catalog_id, clean, content_len, page_size, total_pages, None, now),
+    )
+    conn.commit()
+    row = get_catalog_content(conn, catalog_id)
+    if not row:
+        raise ApiError(50046, "正文缓存失败", 500)
+    return row
+
+
+def ensure_catalog_content(conn: sqlite3.Connection, catalog_row: sqlite3.Row) -> sqlite3.Row:
+    catalog_id = catalog_row["catalog_id"]
+    cached = get_catalog_content(conn, catalog_id)
+    if cached:
+        return cached
+
+    text_url = (catalog_row["text_url"] or "").strip()
+    if not text_url:
+        raise ApiError(40071, "该书暂无可用的纯文本正文链接", 400)
+    text = _http_get_text(text_url, timeout_seconds=15)
+    return cache_catalog_content(conn, catalog_id, text)
+
+
 # ─────────────────────────── 鉴权依赖 ────────────────────────────
 
 def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
@@ -435,6 +645,112 @@ def exchange_wechat_code(login_code: str, debug_open_id: Optional[str] = None) -
     if not open_id:
         raise ApiError(40001, "登录凭证无效，请重试", 400)
     return open_id
+
+
+# ─────────────────────────── 外部书源（Gutendex） ───────────────────────────
+
+GUTENDEX_BASE_URL = "https://gutendex.com"
+
+
+def _http_get_json(url: str, timeout_seconds: int = 12) -> Dict[str, Any]:
+    req = UrlRequest(
+        url,
+        headers={
+            # 兼容部分站点对 UA 的限制
+            "User-Agent": "youzainaye/1.0 (+https://example.local)",
+            "Accept": "application/json",
+        },
+        method="GET",
+    )
+    with urlopen(req, timeout=timeout_seconds) as resp:
+        raw = resp.read()
+    return json.loads(raw.decode("utf-8"))
+
+
+def _http_get_text(url: str, timeout_seconds: int = 15, max_bytes: int = 2_000_000) -> str:
+    """
+    拉取纯文本正文。
+    - 限制体积，避免一次性拉超大文件导致内存/延迟问题
+    - 优先按 UTF-8 解码；失败时退回 latin-1（尽量不炸）
+    """
+    req = UrlRequest(
+        url,
+        headers={
+            "User-Agent": "youzainaye/1.0 (+https://example.local)",
+            "Accept": "text/plain,*/*;q=0.8",
+        },
+        method="GET",
+    )
+    with urlopen(req, timeout=timeout_seconds) as resp:
+        raw = resp.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise ApiError(50041, "正文过大，暂不支持在线阅读", 500)
+    try:
+        return raw.decode("utf-8")
+    except Exception:
+        return raw.decode("latin-1", errors="replace")
+
+
+def _gutendex_pick_text_url(formats: Dict[str, str]) -> Optional[str]:
+    """
+    从 Gutendex formats 中选择最适合的纯文本链接。
+    规则：优先 text/plain（尽量避开 .zip），其次兼容带 charset 的 key。
+    """
+    if not formats:
+        return None
+
+    candidates: List[str] = []
+    for k, v in formats.items():
+        lk = (k or "").lower()
+        if not v:
+            continue
+        if lk.startswith("text/plain"):
+            candidates.append(v)
+
+    if not candidates:
+        return None
+
+    def score(u: str) -> int:
+        lu = u.lower()
+        s = 0
+        if ".zip" in lu:
+            s -= 10
+        if lu.endswith(".txt"):
+            s += 3
+        if "utf-8" in lu or "utf8" in lu:
+            s += 1
+        return s
+
+    candidates.sort(key=score, reverse=True)
+    return candidates[0]
+
+
+def gutendex_search_books(query: str, page: int = 1) -> Dict[str, Any]:
+    query = (query or "").strip()
+    if not query:
+        raise ApiError(40061, "搜索关键词不能为空", 400)
+    if page < 1 or page > 50:
+        raise ApiError(40062, "page 范围不合法", 400)
+
+    params = urlencode({"search": query, "page": page})
+    url = f"{GUTENDEX_BASE_URL}/books?{params}"
+    return _http_get_json(url, timeout_seconds=12)
+
+
+def gutendex_list_popular(page: int = 1) -> Dict[str, Any]:
+    if page < 1 or page > 50:
+        raise ApiError(40062, "page 范围不合法", 400)
+    params = urlencode({"sort": "popular", "page": page})
+    url = f"{GUTENDEX_BASE_URL}/books?{params}"
+    return _http_get_json(url, timeout_seconds=12)
+
+
+def gutendex_get_book(source_book_id: str) -> Dict[str, Any]:
+    source_book_id = (source_book_id or "").strip()
+    if not source_book_id.isdigit():
+        raise ApiError(40063, "source_book_id 不合法", 400)
+    url = f"{GUTENDEX_BASE_URL}/books/{source_book_id}"
+    return _http_get_json(url, timeout_seconds=12)
 
 
 def create_or_login_user(payload: LoginPayload) -> Dict[str, Any]:
@@ -802,7 +1118,7 @@ def unbind_pair(
 
 @app.post("/api/v1/books")
 def create_book(
-    payload:      BookPayload,
+    payload:      CreateBookPayload,
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id:   str             = Depends(get_request_id),
 ) -> JSONResponse:
@@ -819,19 +1135,49 @@ def create_book(
 
     book_id = generate_id("b")
     now     = utc_now()
-    conn.execute(
-        """
-        INSERT INTO books (book_id, pair_id, title, author, total_pages, status, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?, 'reading', ?, ?)
-        """,
-        (book_id, pair["pair_id"], payload.title.strip(), payload.author.strip(), payload.total_pages, current_user["user_id"], now),
-    )
+    catalog_id: Optional[str] = (payload.catalog_id or "").strip() or None
+
+    # 真实书源模式：必须可拉取正文并分页成功，才能创建共读书（避免“随便加假书”）
+    if catalog_id:
+        catalog_row = get_or_fetch_catalog_book(conn, catalog_id)
+        content_row = ensure_catalog_content(conn, catalog_row)
+        title = (catalog_row["title"] or "").strip()
+        author = (catalog_row["author"] or "").strip()
+        total_pages = int(content_row["total_pages"] or 1)
+        if not title or total_pages < 1:
+            conn.close()
+            raise ApiError(50047, "书源数据异常，无法创建共读书", 500)
+
+        conn.execute(
+            """
+            INSERT INTO books (book_id, pair_id, title, author, total_pages, status, created_by, created_at, catalog_id)
+            VALUES (?, ?, ?, ?, ?, 'reading', ?, ?, ?)
+            """,
+            (book_id, pair["pair_id"], title, author, total_pages, current_user["user_id"], now, catalog_id),
+        )
+    else:
+        # 兼容旧模式：手动输入
+        title = (payload.title or "").strip()
+        if not title:
+            conn.close()
+            raise ApiError(40072, "书名不能为空", 400)
+        if payload.total_pages is None:
+            conn.close()
+            raise ApiError(40073, "总页数不能为空", 400)
+
+        conn.execute(
+            """
+            INSERT INTO books (book_id, pair_id, title, author, total_pages, status, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, 'reading', ?, ?)
+            """,
+            (book_id, pair["pair_id"], title, payload.author.strip(), int(payload.total_pages), current_user["user_id"], now),
+        )
     conn.commit()
     book       = conn.execute("SELECT * FROM books WHERE book_id = ?", (book_id,)).fetchone()
     partner_id = get_pair_partner_id(pair, current_user["user_id"])
     data       = get_book_progress(conn, book, current_user["user_id"], partner_id)
     conn.close()
-    logger.info("添加书籍 book_id=%s title=%s pair_id=%s", book_id, payload.title, pair["pair_id"])
+    logger.info("添加书籍 book_id=%s title=%s pair_id=%s", book_id, data["title"], pair["pair_id"])
     return ok(data, request_id=request_id)
 
 
@@ -881,6 +1227,163 @@ def list_books(
     books      = [get_book_progress(conn, row, current_user["user_id"], partner_id) for row in rows]
     conn.close()
     return ok({"books": books}, request_id=request_id)
+
+
+# ─────────────────────────── 书城 & 在线翻阅（公版书） ───────────────────────────
+
+@app.get("/api/v1/store/books")
+def store_list_books(
+    query: Optional[str] = None,
+    page: int = 1,
+    request_id: str = Depends(get_request_id),
+) -> JSONResponse:
+    """
+    书城搜索（公版书）：返回可用于详情与阅读的 catalog_id。
+    - 本地库优先：优先从 catalog_books 模糊搜索
+    - 不足时：调用 Gutendex 补齐并写回本地库
+    """
+    q = (query or "").strip()
+    if page < 1 or page > 50:
+        raise ApiError(40082, "page 范围不合法", 400)
+
+    conn = get_conn()
+
+    # 1) 本地命中：有 query 则模糊搜索；无 query 则给最近缓存/热门
+    if q:
+        like = f"%{q}%"
+        local_rows = conn.execute(
+            """
+            SELECT * FROM catalog_books
+            WHERE title LIKE ? OR author LIKE ?
+            ORDER BY updated_at DESC
+            LIMIT 20
+            """,
+            (like, like),
+        ).fetchall()
+    else:
+        local_rows = conn.execute(
+            """
+            SELECT * FROM catalog_books
+            ORDER BY updated_at DESC
+            LIMIT 20
+            """
+        ).fetchall()
+
+    books: List[Dict[str, Any]] = []
+    seen: set = set()
+    for row in local_rows:
+        seen.add(row["catalog_id"])
+        books.append(
+            {
+                "catalog_id": row["catalog_id"],
+                "title": row["title"],
+                "author": row["author"],
+                "language": row["language"],
+                "cover_url": row["cover_url"],
+                "detail_url": row["detail_url"],
+                "has_text": bool(row["text_url"]),
+            }
+        )
+
+    # 2) 外部补齐（兜底）：有 query 走搜索；无 query 拉热门
+    if len(books) < 20:
+        try:
+            payload = gutendex_search_books(q, page=page) if q else gutendex_list_popular(page=page)
+            results = payload.get("results") or []
+            if isinstance(results, list):
+                for item in results:
+                    if not isinstance(item, dict):
+                        continue
+                    cat = upsert_catalog_book_from_gutendex(conn, item)
+                    if cat["catalog_id"] in seen:
+                        continue
+                    seen.add(cat["catalog_id"])
+                    books.append(
+                        {
+                            "catalog_id": cat["catalog_id"],
+                            "title": cat["title"],
+                            "author": cat["author"],
+                            "language": cat["language"],
+                            "cover_url": cat["cover_url"],
+                            "detail_url": cat["detail_url"],
+                            "has_text": bool(cat["text_url"]),
+                        }
+                    )
+                    if len(books) >= 20:
+                        break
+        except ApiError:
+            # 外部失败不影响本地命中（降级）
+            pass
+        except Exception as exc:
+            logger.warning("书城外部搜索失败: %s", exc)
+
+    conn.close()
+    return ok({"books": books, "page": page}, request_id=request_id)
+
+
+@app.get("/api/v1/store/books/{catalog_id}")
+def store_get_book(
+    catalog_id: str,
+    request_id: str = Depends(get_request_id),
+) -> JSONResponse:
+    conn = get_conn()
+    row = get_or_fetch_catalog_book(conn, catalog_id)
+    content = get_catalog_content(conn, catalog_id)
+    conn.close()
+    return ok(
+        {
+            "book": {
+                "catalog_id": row["catalog_id"],
+                "title": row["title"],
+                "author": row["author"],
+                "language": row["language"],
+                "cover_url": row["cover_url"],
+                "detail_url": row["detail_url"],
+                "has_text": bool(row["text_url"]),
+                "total_pages": int(content["total_pages"]) if content else None,
+            }
+        },
+        request_id=request_id,
+    )
+
+
+@app.get("/api/v1/store/books/{catalog_id}/read")
+def store_read_page(
+    catalog_id: str,
+    page: int = 1,
+    request_id: str = Depends(get_request_id),
+) -> JSONResponse:
+    if page < 1:
+        raise ApiError(40083, "page 不能小于 1", 400)
+
+    conn = get_conn()
+    catalog_row = get_or_fetch_catalog_book(conn, catalog_id)
+    content_row = ensure_catalog_content(conn, catalog_row)
+    total_pages = int(content_row["total_pages"])
+    page_size = int(content_row["page_size_chars"])
+
+    if page > total_pages:
+        conn.close()
+        raise ApiError(40084, "page 不能超过总页数", 400)
+
+    text = content_row["content_text"]
+    start = (page - 1) * page_size
+    end = min(len(text), start + page_size)
+    snippet = text[start:end]
+
+    conn.close()
+    return ok(
+        {
+            "catalog_id": catalog_id,
+            "title": catalog_row["title"],
+            "author": catalog_row["author"],
+            "page": page,
+            "total_pages": total_pages,
+            "page_size_chars": page_size,
+            "content": snippet,
+        },
+        request_id=request_id,
+    )
 
 
 @app.post("/api/v1/entries")
@@ -1060,6 +1563,51 @@ def get_book_entries(
         },
         request_id=request_id,
     )
+
+
+@app.post("/api/v1/books/{book_id}/entries/read")
+def mark_book_entries_read(
+    book_id:       str,
+    payload:       ReadEntriesPayload,
+    current_user:  Dict[str, Any] = Depends(get_current_user),
+    request_id:    str             = Depends(get_request_id),
+) -> JSONResponse:
+    """显式标记书籍笔记已读（供小程序前端同步未读状态）"""
+    conn = get_conn()
+    book = conn.execute("SELECT * FROM books WHERE book_id = ?", (book_id,)).fetchone()
+    if not book:
+        conn.close()
+        raise ApiError(40411, "书籍不存在", 404)
+
+    pair = get_active_pair(conn, current_user["user_id"])
+    if not pair or pair["pair_id"] != book["pair_id"]:
+        conn.close()
+        raise ApiError(40302, "无权操作这本书", 403)
+
+    target_time = utc_now()
+    if payload.last_entry_id:
+        row = conn.execute(
+            """
+            SELECT created_at FROM entries
+            WHERE entry_id = ? AND book_id = ?
+            LIMIT 1
+            """,
+            (payload.last_entry_id, book_id),
+        ).fetchone()
+        if row:
+            target_time = row["created_at"]
+
+    conn.execute(
+        """
+        INSERT INTO read_marks (user_id, book_id, last_read_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(user_id, book_id) DO UPDATE SET last_read_at = excluded.last_read_at
+        """,
+        (current_user["user_id"], book_id, target_time),
+    )
+    conn.commit()
+    conn.close()
+    return ok({"book_id": book_id, "last_read_at": target_time}, request_id=request_id)
 
 
 @app.post("/api/v1/entries/{entry_id}/replies")

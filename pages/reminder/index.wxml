@@ -1,0 +1,13 @@
+<view class="page">
+  <view class="card">
+    <view class="row">
+      <text class="label">开启提醒</text>
+      <switch checked="{{enabled}}" bindchange="onToggleEnabled" color="#07c160" />
+    </view>
+    <view class="label">提醒时间（HH:MM）</view>
+    <input class="input" value="{{remind_time}}" bindinput="onInputTime" />
+    <view class="label">时区</view>
+    <input class="input" value="{{timezone}}" bindinput="onInputTimezone" />
+    <button class="btn" loading="{{saving}}" bindtap="onSave">保存提醒</button>
+  </view>
+</view>

@@ -93,12 +93,80 @@ def add_book(client, token: str, title: str = "测试之书", pages: int = 100) 
     return resp.json()["data"]["book_id"]
 
 
+def seed_catalog_book_and_content() -> str:
+    """
+    为测试写入一条本地书城数据，避免依赖外网。
+    返回 catalog_id（格式：gutendex_{id}）
+    """
+    conn = backend_module.get_conn()
+    catalog_id = "gutendex_999999"
+    now = backend_module.utc_now()
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO catalog_books
+        (catalog_id, source, source_book_id, title, author, language, cover_url, detail_url, text_url, created_at, updated_at)
+        VALUES (?, 'gutendex', '999999', ?, ?, 'zh', '', 'https://example.com/book', 'https://example.com/text', ?, ?)
+        """,
+        (catalog_id, "测试公版书", "测试作者", now, now),
+    )
+    # 正文缓存：两页
+    text = "甲" * 1200 + "乙" * 1200
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO catalog_contents
+        (catalog_id, content_text, content_len, page_size_chars, total_pages, etag, last_fetched_at)
+        VALUES (?, ?, ?, 1200, 2, NULL, ?)
+        """,
+        (catalog_id, text, len(text), now),
+    )
+    conn.commit()
+    conn.close()
+    return catalog_id
+
+
 # ────────────────── 健康检查 ──────────────────
 
 def test_health(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
+
+
+# ────────────────── 书城 & 在线翻阅（本地种子，不依赖外网） ──────────────────
+
+def test_store_book_detail_and_read_page_from_cache(client):
+    token = register_and_login(client, "open_id_store_read_001")
+    catalog_id = seed_catalog_book_and_content()
+
+    # 书城详情与阅读允许未登录访问
+    detail = client.get(f"/api/v1/store/books/{catalog_id}")
+    assert detail.status_code == 200, detail.text
+    book = detail.json()["data"]["book"]
+    assert book["catalog_id"] == catalog_id
+    assert book["has_text"] is True
+
+    read1 = client.get(f"/api/v1/store/books/{catalog_id}/read?page=1")
+    assert read1.status_code == 200, read1.text
+    data1 = read1.json()["data"]
+    assert data1["page"] == 1
+    assert data1["total_pages"] == 2
+    assert len(data1["content"]) > 100
+
+    read2 = client.get(f"/api/v1/store/books/{catalog_id}/read?page=2")
+    assert read2.status_code == 200, read2.text
+    assert read2.json()["data"]["page"] == 2
+
+
+def test_create_book_with_catalog_id_requires_partner_and_uses_total_pages(client):
+    ta = register_and_login(client, "open_id_store_pair_a")
+    tb = register_and_login(client, "open_id_store_pair_b")
+    bind_users(client, ta, tb)
+    catalog_id = seed_catalog_book_and_content()
+
+    resp = client.post("/api/v1/books", json={"catalog_id": catalog_id}, headers=auth(ta))
+    assert resp.status_code == 200, resp.text
+    created = resp.json()["data"]
+    assert created["total_pages"] == 2
 
 
 # ────────────────── 登录 & 用户信息 ──────────────────
@@ -481,6 +549,29 @@ def test_reply_appears_in_entries(client):
     a_entry2 = next(e for e in entries2 if e["entry_id"] == entry_id)
     assert len(a_entry2["replies"]) == 1
     assert a_entry2["replies"][0]["content"] == "深有同感"
+
+
+def test_mark_entries_read_endpoint(client):
+    """主动标记已读后，再拉取列表不应再显示未读计数"""
+    ta = register_and_login(client, "open_id_mark_read_a")
+    tb = register_and_login(client, "open_id_mark_read_b")
+    bind_users(client, ta, tb)
+    book_id = add_book(client, ta, pages=180)
+
+    # 伙伴新增一条笔记，a 端此时应存在未读
+    client.post("/api/v1/entries",
+                json={"book_id": book_id, "page": 20, "note_content": "新笔记"},
+                headers=auth(tb))
+
+    mark_resp = client.post(f"/api/v1/books/{book_id}/entries/read",
+                            json={"last_entry_id": ""},
+                            headers=auth(ta))
+    assert mark_resp.status_code == 200
+    assert mark_resp.json()["code"] == 0
+
+    entries_resp = client.get(f"/api/v1/books/{book_id}/entries", headers=auth(ta))
+    assert entries_resp.status_code == 200
+    assert entries_resp.json()["data"]["unread_count"] == 0
 
 
 def test_cannot_reply_locked_entry(client):

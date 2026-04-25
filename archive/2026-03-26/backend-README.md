@@ -34,8 +34,16 @@ python -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload
 |--------------------|-----------------------------|--------|
 | `WECHAT_APP_ID`    | 微信小程序 AppID              | 空（走 debug 模式） |
 | `WECHAT_APP_SECRET`| 微信小程序 AppSecret          | 空（走 debug 模式） |
+| `DB_BACKEND`       | 数据库后端（`sqlite`/`mysql`） | `sqlite` |
+| `MYSQL_HOST`       | MySQL 主机                   | `127.0.0.1` |
+| `MYSQL_PORT`       | MySQL 端口                   | `3306` |
+| `MYSQL_USER`       | MySQL 用户                   | `root` |
+| `MYSQL_PASSWORD`   | MySQL 密码                   | 空 |
+| `MYSQL_DB`         | MySQL 数据库名               | `youzainaye` |
 
 > 未配置微信密钥时，登录接口接受前端传入的 `debug_open_id` 作为用户唯一标识，方便本地开发调试。
+
+> 重构期支持数据库后端切换：设置 `DB_BACKEND=mysql` 可切换到 MySQL；如需快速回滚，改回 `DB_BACKEND=sqlite` 后重启服务即可。
 
 ---
 
@@ -46,6 +54,33 @@ cd backend
 pip install pytest httpx
 pytest test_app.py -v
 ```
+
+---
+
+## 小程序联调配置（`apiBaseUrl`）
+
+小程序端已支持按环境自动切换 API 地址，并支持本地覆盖值 `apiBaseUrlOverride`。
+
+### 场景 1：本地开发（开发者工具）
+
+- 小程序环境：`develop`
+- 默认地址：`http://127.0.0.1:8000/api/v1`
+- 适用：后端与开发者工具在同一台机器
+
+### 场景 2：局域网真机联调
+
+- 小程序环境：通常仍是 `develop` / `trial`
+- 建议方式：在小程序本地存储写入 `apiBaseUrlOverride`
+- 示例地址：`http://192.168.1.23:8000/api/v1`（替换为你电脑的局域网 IP）
+- 注意：需确保手机与电脑同一网络，且后端监听地址可被手机访问
+
+### 场景 3：生产环境（发布版）
+
+- 小程序环境：`release`
+- 默认地址：在 `app.js` 的 `API_BASE_URL_BY_ENV.release` 配置
+- 要求：
+  - 使用 HTTPS 域名
+  - 域名已在小程序后台配置为合法 request 域名
 
 ---
 
@@ -65,6 +100,9 @@ backend/
 ---
 
 ## API 概览
+
+> v2 重构进行中：当前稳定接口仍为 `/api/v1/*`，v2 契约见  
+> `docs/superpowers/specs/2026-03-23-fastapi-mysql-v2-contract.md`
 
 ### 认证
 
@@ -126,6 +164,14 @@ backend/
 - `code = 0`：成功
 - `code = 4xxxx`：客户端错误（参数/权限）
 - `code = 5xxxx`：服务端错误
+
+---
+
+## 测试命名约定（重构期）
+
+- `test_v2_*`：v2 契约与行为测试
+- `test_v1_compat_*`：v1 兼容壳测试
+- `test_migration_*`：SQLite -> MySQL 迁移验证测试
 
 ---
 

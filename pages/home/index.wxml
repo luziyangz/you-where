@@ -33,12 +33,12 @@
       <view class="card partner-status-card">
         <view class="partner-row">
           <view class="user-info">
-            <image class="avatar me-avatar" src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+            <image class="avatar me-avatar" src="{{user.avatar || 'https://picsum.photos/seed/yx_me/120/120'}}" mode="aspectFill"></image>
             <view class="nickname">我 · {{user.nickname || '书友'}}</view>
           </view>
           <view class="status-badge">已绑定</view>
           <view class="user-info">
-            <image class="avatar partner-avatar" src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+            <image class="avatar partner-avatar" src="{{partner.avatar || 'https://picsum.photos/seed/yx_partner/120/120'}}" mode="aspectFill"></image>
             <view class="nickname">{{partner.nickname || '伙伴'}}</view>
           </view>
         </view>
@@ -89,7 +89,7 @@
             <view class="progress-track-bg me-bg-light"></view>
             <view class="progress-bar-me" style="width: {{currentBook.my_progress_percent}}%">
               <view class="marker-avatar-embedded">
-                <image src="{{user.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+                <image src="{{user.avatar || 'https://picsum.photos/seed/yx_me/120/120'}}" mode="aspectFill"></image>
               </view>
             </view>
           </view>
@@ -99,7 +99,7 @@
             <view class="progress-track-bg partner-bg-light"></view>
             <view class="progress-bar-partner" style="width: {{currentBook.partner_progress_percent}}%">
               <view class="marker-avatar-embedded">
-                <image src="{{partner.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
+                <image src="{{partner.avatar || 'https://picsum.photos/seed/yx_partner/120/120'}}" mode="aspectFill"></image>
               </view>
             </view>
           </view>
@@ -147,7 +147,7 @@
 
   <!-- 添加书籍弹窗 -->
   <view class="modal-overlay" wx:if="{{showBookPopup}}" bindtap="onCloseBookPopup">
-    <view class="modal-content" catchtap="true">
+    <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">
@@ -170,7 +170,7 @@
 
   <!-- 记一笔弹窗 -->
   <view class="modal-overlay" wx:if="{{showNotePopup}}" bindtap="onCloseNotePopup">
-    <view class="modal-content" catchtap="true">
+    <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">

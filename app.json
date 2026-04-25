@@ -3,9 +3,17 @@
     "pages/home/index",
     "pages/progress/index",
     "pages/profile/index",
+    "pages/reading-history/index",
+    "pages/reading-goal/index",
+    "pages/reminder/index",
     "pages/settings/index",
+    "pages/privacy-policy/index",
+    "pages/user-agreement/index",
+    "pages/about-us/index",
     "pages/partner/index",
-    "pages/bookstore/index"
+    "pages/bookstore/index",
+    "pages/book-detail/index",
+    "pages/reader/index"
   ],
   "window": {
     "navigationBarTitleText": "你在哪页",

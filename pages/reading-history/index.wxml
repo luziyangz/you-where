@@ -1,0 +1,13 @@
+<view class="page">
+  <view wx:if="{{loading && !items.length}}" class="empty">正在加载...</view>
+  <view wx:elif="{{!items.length}}" class="empty">还没有阅读历史</view>
+  <block wx:else>
+    <view wx:for="{{items}}" wx:key="book_id" class="item">
+      <view class="title">{{item.title}}</view>
+      <view class="meta">{{item.author || '作者未知'}} · {{item.my_progress}} / {{item.total_pages}} 页</view>
+      <view class="meta">状态：{{item.status === 'finished' ? '已读完' : '共读中'}}</view>
+    </view>
+    <view wx:if="{{loading}}" class="more">加载中...</view>
+    <view wx:elif="{{!hasMore}}" class="more">没有更多了</view>
+  </block>
+</view>

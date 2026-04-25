@@ -1,0 +1,125 @@
+.container {
+  min-height: 100vh;
+  background: #f7f7f7;
+  padding: 24rpx 24rpx 60rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);
+}
+
+.header {
+  display: flex;
+  gap: 24rpx;
+}
+
+.cover {
+  width: 180rpx;
+  height: 252rpx;
+  border-radius: 12rpx;
+  background: #eee;
+  flex-shrink: 0;
+}
+
+.meta {
+  flex: 1;
+}
+
+.title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 10rpx;
+}
+
+.author {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 14rpx;
+}
+
+.desc {
+  font-size: 24rpx;
+  color: #888;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+
+.btn {
+  flex: 1;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+}
+
+.primary {
+  background: #07c160;
+  color: #fff;
+}
+
+.intro,
+.reviews {
+  margin-top: 26rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.section-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 12rpx;
+}
+
+.intro-text {
+  font-size: 24rpx;
+  color: #555;
+  line-height: 1.7;
+}
+
+.review-item {
+  padding: 16rpx 18rpx;
+  border-radius: 14rpx;
+  background: #f8fafc;
+  margin-bottom: 14rpx;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.reviewer {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #334155;
+}
+
+.rating {
+  font-size: 22rpx;
+  color: #f59e0b;
+}
+
+.quality-level {
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 20rpx;
+}
+
+.review-content {
+  font-size: 24rpx;
+  color: #475569;
+  line-height: 1.6;
+}
+

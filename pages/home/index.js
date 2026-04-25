@@ -45,6 +45,9 @@ Page({
     }
   },
 
+  // 弹窗内容区域阻止事件冒泡（WXML 的 catchtap 需要绑定方法名）
+  noop() {},
+
   async initPage() {
     const user = app.globalData.user;
     if (!user || !app.globalData.token) {

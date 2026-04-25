@@ -1,4 +1,4 @@
-const { fetchMe, fetchStats, fetchHome } = require('../../services/api');
+const { fetchProfileMe, fetchProfileStats, updateMe } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
 
 const app = getApp();
@@ -12,7 +12,10 @@ Page({
       total_books: 0,
       total_pages: 0,
       total_entries: 0
-    }
+    },
+    editingNickname: false,
+    nicknameDraft: '',
+    savingNickname: false
   },
 
   onShow() {
@@ -25,6 +28,8 @@ Page({
       });
     }
   },
+
+  noop() {},
 
   async initPage() {
     if (!app.globalData.user || !app.globalData.token) {
@@ -45,20 +50,11 @@ Page({
 
   async loadProfileData() {
     try {
-      const [me, stats] = await Promise.all([fetchMe(), fetchStats()]);
+      const [profileRes, stats] = await Promise.all([fetchProfileMe(), fetchProfileStats()]);
+      const me = profileRes.user || null;
+      const partner = profileRes.partner || null;
       app.globalData.user = me;
-      
-      let partner = null;
-      if (app.globalData.pair) {
-        partner = app.globalData.pair.partner;
-      } else {
-        // 联调阶段不做静默兜底，依赖后端接口完整返回关系数据
-        const homeData = await fetchHome();
-        app.globalData.pair = homeData.pair;
-        if (homeData.pair) {
-          partner = homeData.pair.partner;
-        }
-      }
+      app.globalData.pair = partner ? { partner } : null;
 
       this.setData({
         isLogin: true,
@@ -107,6 +103,60 @@ Page({
     });
   },
 
+  onTapEditNickname() {
+    if (!this.data.user) {
+      return;
+    }
+    this.setData({
+      editingNickname: true,
+      nicknameDraft: this.data.user.nickname || ''
+    });
+  },
+
+  onNicknameInput(e) {
+    this.setData({ nicknameDraft: e.detail.value || '' });
+  },
+
+  onCancelEditNickname() {
+    this.setData({
+      editingNickname: false,
+      nicknameDraft: ''
+    });
+  },
+
+  async onSaveNickname() {
+    const nickname = (this.data.nicknameDraft || '').trim();
+    if (!nickname) {
+      wx.showToast({ title: '请输入昵称', icon: 'none' });
+      return;
+    }
+    this.setData({ savingNickname: true });
+    try {
+      const payload = await updateMe({ nickname });
+      const updatedUser = payload.user || null;
+      if (updatedUser) {
+        app.globalData.user = updatedUser;
+        wx.setStorageSync('user', updatedUser);
+        this.setData({
+          user: {
+            ...this.data.user,
+            ...updatedUser
+          },
+          editingNickname: false,
+          nicknameDraft: ''
+        });
+      }
+      wx.showToast({ title: '昵称已更新', icon: 'success' });
+    } catch (error) {
+      wx.showToast({
+        title: formatApiError(error, '更新失败'),
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ savingNickname: false });
+    }
+  },
+
   onTapLogout() {
     wx.showModal({
       title: '退出登录',
@@ -136,6 +186,24 @@ Page({
   onTapSettings() {
     wx.navigateTo({
       url: '/pages/settings/index'
+    });
+  },
+
+  onTapReadingHistory() {
+    wx.navigateTo({
+      url: '/pages/reading-history/index'
+    });
+  },
+
+  onTapReadingGoal() {
+    wx.navigateTo({
+      url: '/pages/reading-goal/index'
+    });
+  },
+
+  onTapReminder() {
+    wx.navigateTo({
+      url: '/pages/reminder/index'
     });
   }
 });

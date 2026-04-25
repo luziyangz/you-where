@@ -1,0 +1,97 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any, Dict
+import re
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from api.v2.common import ReminderPayload, get_current_user, get_request_id, ok
+from common.db import get_db_session
+from common.errors import ApiError
+from common.models import ReminderConfig
+
+
+router = APIRouter(prefix="/profile", tags=["v2-reminders"])
+
+TIME_PATTERN = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+@router.get("/reminders")
+def get_reminders(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    row = db.execute(select(ReminderConfig).where(ReminderConfig.user_id == current_user["user_id"])).scalar_one_or_none()
+    if not row:
+        return ok(
+            {
+                "reminder": {
+                    "enabled": True,
+                    "remind_time": "21:00",
+                    "timezone": "Asia/Shanghai",
+                    "updated_at": None,
+                }
+            },
+            request_id=request_id,
+        )
+    return ok(
+        {
+            "reminder": {
+                "enabled": bool(row.enabled),
+                "remind_time": row.remind_time,
+                "timezone": row.timezone,
+                "updated_at": row.updated_at,
+            }
+        },
+        request_id=request_id,
+    )
+
+
+@router.put("/reminders")
+def put_reminders(
+    payload: ReminderPayload,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    if not TIME_PATTERN.match(payload.remind_time or ""):
+        raise ApiError(40087, "提醒时间格式应为 HH:MM", 400)
+    if not payload.timezone or len(payload.timezone) > 64:
+        raise ApiError(40088, "时区参数不合法", 400)
+
+    row = db.execute(select(ReminderConfig).where(ReminderConfig.user_id == current_user["user_id"])).scalar_one_or_none()
+    now = _utc_now()
+    if row:
+        row.enabled = 1 if payload.enabled else 0
+        row.remind_time = payload.remind_time
+        row.timezone = payload.timezone
+        row.updated_at = now
+    else:
+        row = ReminderConfig(
+            user_id=current_user["user_id"],
+            enabled=1 if payload.enabled else 0,
+            remind_time=payload.remind_time,
+            timezone=payload.timezone,
+            updated_at=now,
+        )
+        db.add(row)
+    db.commit()
+    return ok(
+        {
+            "reminder": {
+                "enabled": bool(row.enabled),
+                "remind_time": row.remind_time,
+                "timezone": row.timezone,
+                "updated_at": row.updated_at,
+            }
+        },
+        request_id=request_id,
+    )

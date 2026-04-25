@@ -30,7 +30,11 @@ Page({
 
     // 共同阅读统计
     sharedBooks: 0,
-    sharedNotes: 0
+    sharedNotes: 0,
+
+    // 我的绑定二维码
+    myBindQrText: '',
+    myBindQrUrl: ''
   },
 
   onLoad() {
@@ -64,25 +68,29 @@ Page({
       const user = app.globalData.user || {};
 
       if (pair && pair.partner) {
+        const myJoinCode = user.join_code || '';
         this.setData({
           hasPartner:      true,
           myNickname:      user.nickname  || '',
           myAvatar:        user.avatar    || '',
-          myJoinCode:      user.join_code || '',
+          myJoinCode,
           partnerNickname: pair.partner.nickname || '书友',
           partnerAvatar:   pair.partner.avatar   || '',
           bindDays:        pair.bind_days         || 1,
           sharedBooks:     pair.shared_books      || 0,
-          sharedNotes:     pair.shared_notes      || 0
+          sharedNotes:     pair.shared_notes      || 0,
+          ...this.buildMyQrData(myJoinCode)
         });
         // 同步到全局
         app.globalData.pair = pair;
       } else {
+        const myJoinCode = user.join_code || '';
         this.setData({
           hasPartner:  false,
           myNickname:  user.nickname  || '',
           myAvatar:    user.avatar    || '',
-          myJoinCode:  user.join_code || ''
+          myJoinCode,
+          ...this.buildMyQrData(myJoinCode)
         });
         app.globalData.pair = null;
       }
@@ -96,6 +104,23 @@ Page({
       // 拉取数据后刷新导航标题和 tabBar
       this.onShow();
     }
+  },
+
+  buildMyQrData(joinCode) {
+    const code = (joinCode || '').trim();
+    if (!code) {
+      return {
+        myBindQrText: '',
+        myBindQrUrl: ''
+      };
+    }
+    // 统一二维码内容协议，便于后续多端互通。
+    const qrText = `youzainaye://pair/bind?join_code=${code}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(qrText)}`;
+    return {
+      myBindQrText: qrText,
+      myBindQrUrl: qrUrl
+    };
   },
 
   onInputInviteCode(e) {
@@ -143,6 +168,40 @@ Page({
     }
   },
 
+  parseJoinCodeFromScanResult(rawValue) {
+    const raw = (rawValue || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    // 1) 直接是 6 位数字。
+    if (/^\d{6}$/.test(raw)) {
+      return raw;
+    }
+
+    // 2) URL / scheme 参数：?join_code=123456
+    const queryMatch = raw.match(/[?&]join_code=(\d{6})\b/i);
+    if (queryMatch) {
+      return queryMatch[1];
+    }
+
+    // 3) 路径末尾：.../bind/123456
+    const pathMatch = raw.match(/\/bind\/(\d{6})\b/i);
+    if (pathMatch) {
+      return pathMatch[1];
+    }
+
+    // 4) JSON 文本：{"join_code":"123456"}
+    const jsonMatch = raw.match(/"join_code"\s*:\s*"(\d{6})"/i);
+    if (jsonMatch) {
+      return jsonMatch[1];
+    }
+
+    // 5) 兜底提取：末尾 6 位数字。
+    const tailMatch = raw.match(/(\d{6})$/);
+    return tailMatch ? tailMatch[1] : '';
+  },
+
   // 扫码绑定：解析二维码中的 6 位共读码
   scanToBind() {
     if (!app.globalData.token) {
@@ -150,21 +209,54 @@ Page({
       return;
     }
     wx.scanCode({
+      scanType: ['qrCode', 'barCode'],
       success: (res) => {
-        // 二维码内容示例：youjinaye://bind/123456 或直接是 6 位数字
-        const raw = (res.result || '').trim();
-        // 尝试提取末尾 6 位数字
-        const match = raw.match(/(\d{6})$/);
-        const code  = match ? match[1] : raw;
+        const code = this.parseJoinCodeFromScanResult(res.result || '');
+        if (!code) {
+          wx.showToast({ title: '二维码格式不正确', icon: 'none' });
+          return;
+        }
+        if (code === (this.data.myJoinCode || '').trim()) {
+          wx.showToast({ title: '不能绑定自己的共读码', icon: 'none' });
+          return;
+        }
         if (code.length === 6) {
           this.setData({ inviteCode: code });
           this.bindPartner();
-        } else {
-          wx.showToast({ title: '二维码格式不正确', icon: 'none' });
         }
       },
       fail: () => {
         wx.showToast({ title: '扫码失败', icon: 'none' });
+      }
+    });
+  },
+
+  onPreviewMyQr() {
+    const url = (this.data.myBindQrUrl || '').trim();
+    if (!url) {
+      wx.showToast({ title: '二维码生成中，请稍后', icon: 'none' });
+      return;
+    }
+    wx.previewImage({
+      urls: [url],
+      current: url
+    });
+  },
+
+  // 一键复制自己的共读码，方便分享给对方绑定
+  onCopyMyJoinCode() {
+    const code = (this.data.myJoinCode || '').trim();
+    if (!code) {
+      wx.showToast({ title: '暂无可复制的共读码', icon: 'none' });
+      return;
+    }
+    wx.setClipboardData({
+      data: code,
+      success: () => {
+        wx.showToast({ title: '共读码已复制', icon: 'success' });
+      },
+      fail: () => {
+        wx.showToast({ title: '复制失败，请重试', icon: 'none' });
       }
     });
   },

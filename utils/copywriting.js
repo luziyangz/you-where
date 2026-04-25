@@ -36,11 +36,22 @@ const mapBindErrorMessage = (error) => {
 
 const formatApiError = (error, fallback) => {
   const code = error && (error.code || error.statusCode);
-  const message = (error && error.message) || fallback || '请求失败';
-  if (code === undefined || code === null || code === '') {
-    return message;
+  const message = (error && error.message) || '';
+  const mappedByCode = {
+    40021: '当前已有一本正在共读的书，请先完成后再添加',
+    40022: '这本书已归档，不能继续更新进度',
+    40023: COPY.entry.pageRollback,
+    40024: COPY.entry.pageExceed,
+    40031: '这条笔记暂未解锁，读到对应页码后可回复',
+    40100: '登录状态已失效，请重新登录',
+    40301: '请先绑定伙伴后再添加书籍',
+    40402: '当前还没有可解绑的伙伴关系',
+    42900: '操作过于频繁，请稍后再试'
+  };
+  if (code && mappedByCode[code]) {
+    return mappedByCode[code];
   }
-  return `[${code}] ${message}`;
+  return message || fallback || '请求失败，请稍后重试';
 };
 
 module.exports = {

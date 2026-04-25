@@ -29,9 +29,19 @@
 
       <!-- 显示自己的共读码，方便对方输入 -->
       <view class="my-code-box" wx:if="{{myNickname}}">
+        <view class="my-code-copy-icon" bindtap="onCopyMyJoinCode">⧉</view>
         <text class="my-code-label">我的共读码</text>
-        <text class="my-code-value">{{myJoinCode}}</text>
-        <text class="my-code-hint">把这个号码发给你的书搭子</text>
+        <view class="my-code-value-row">
+          <text class="my-code-value" bindtap="onCopyMyJoinCode">{{myJoinCode}}</text>
+          <text class="my-code-inline-copy" bindtap="onCopyMyJoinCode">复制</text>
+        </view>
+        <text class="my-code-hint">发送数字，或让对方直接扫码绑定</text>
+        <view class="my-qr-box" wx:if="{{myBindQrUrl}}">
+          <view class="my-qr-card">
+            <image class="my-qr-image" src="{{myBindQrUrl}}" mode="aspectFit" bindtap="onPreviewMyQr" />
+          </view>
+          <text class="my-qr-hint">点击二维码可预览大图</text>
+        </view>
       </view>
     </view>
   </block>

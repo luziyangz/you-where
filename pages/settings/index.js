@@ -1,24 +1,19 @@
 Page({
-  data: {},
-  
   onTapPrivacy() {
-    wx.showToast({
-      title: '隐私政策',
-      icon: 'none'
+    wx.navigateTo({
+      url: '/pages/privacy-policy/index'
     });
   },
   
   onTapAgreement() {
-    wx.showToast({
-      title: '用户协议',
-      icon: 'none'
+    wx.navigateTo({
+      url: '/pages/user-agreement/index'
     });
   },
   
   onTapAbout() {
-    wx.showToast({
-      title: '关于我们',
-      icon: 'none'
+    wx.navigateTo({
+      url: '/pages/about-us/index'
     });
   }
 });

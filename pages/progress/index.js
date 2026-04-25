@@ -8,6 +8,10 @@ Page({
     book: null,
     entries: [],
     unreadCount: 0,
+    entryPage: 1,
+    entryPageSize: 30,
+    entryHasMore: false,
+    entryLoadingMore: false,
     loading: false,
     // 当前用户和伙伴信息（用于进度条头像）
     user: { nickname: '', avatar: '' },
@@ -26,6 +30,9 @@ Page({
     locateQueue: [],
     scrollIntoViewId: ''
   },
+
+  // 弹窗内容区域阻止事件冒泡（WXML 的 catchtap 需要绑定方法名）
+  noop() {},
 
   onShow() {
     this.loadPageData();
@@ -56,17 +63,20 @@ Page({
     this.setData({ loading: true });
     try {
       const currentBookRes = await fetchCurrentBook();
-      const book = currentBookRes.book || null;
+      const rawBook = currentBookRes.book || null;
+      const book = this.decorateBook(rawBook);
       if (!book) {
         this.setData({
           book: null,
           entries: [],
-          unreadCount: 0
+          unreadCount: 0,
+          entryPage: 1,
+          entryHasMore: false
         });
         return;
       }
 
-      const entriesRes = await fetchBookEntries(book.book_id);
+      const entriesRes = await fetchBookEntries(book.book_id, 1, this.data.entryPageSize);
       const normalizedEntries = (entriesRes.entries || []).map((item) => {
         const unlockPage = item.unlock_at_page || item.page;
         return {
@@ -84,7 +94,9 @@ Page({
         book,
         entries: normalizedEntries,
         unreadCount: entriesRes.unread_count || 0,
-        locateQueue: unreadQueue
+        locateQueue: unreadQueue,
+        entryPage: 1,
+        entryHasMore: !!(entriesRes.pagination && entriesRes.pagination.has_more)
       });
       // 联调阶段严格要求后端接口可用，进入页面即同步已读状态
       await this.syncEntriesRead(book.book_id, normalizedEntries);
@@ -100,6 +112,33 @@ Page({
     } finally {
       this.setData({ loading: false });
     }
+  },
+
+  decorateBook(rawBook) {
+    if (!rawBook) {
+      return null;
+    }
+    const totalPages = Number(rawBook.total_pages || 0);
+    const myProgress = Number(rawBook.my_progress || 0);
+    const partnerProgress = Number(rawBook.partner_progress || 0);
+    const safeTotal = totalPages > 0 ? totalPages : 1;
+    const myPercent = Math.min(100, Math.max(0, Math.round((myProgress / safeTotal) * 100)));
+    const partnerPercent = Math.min(100, Math.max(0, Math.round((partnerProgress / safeTotal) * 100)));
+    const gap = myProgress - partnerProgress;
+    let progressSummary = '你们进度一致';
+    if (gap > 0) {
+      progressSummary = `你领先 ${gap} 页`;
+    } else if (gap < 0) {
+      progressSummary = `你落后 ${Math.abs(gap)} 页`;
+    }
+    return {
+      ...rawBook,
+      my_progress_percent: myPercent,
+      partner_progress_percent: partnerPercent,
+      my_finished: totalPages > 0 && myProgress >= totalPages,
+      partner_finished: totalPages > 0 && partnerProgress >= totalPages,
+      progress_summary: progressSummary
+    };
   },
 
   formatTime(timeStr) {
@@ -255,6 +294,35 @@ Page({
     }
     const lastEntryId = entries[entries.length - 1].entry_id;
     await markBookEntriesRead(bookId, lastEntryId);
+  },
+
+  async onLoadMoreEntries() {
+    if (!this.data.book || this.data.entryLoadingMore || !this.data.entryHasMore) {
+      return;
+    }
+    this.setData({ entryLoadingMore: true });
+    try {
+      const nextPage = this.data.entryPage + 1;
+      const payload = await fetchBookEntries(this.data.book.book_id, nextPage, this.data.entryPageSize);
+      const moreEntries = (payload.entries || []).map((item) => ({
+        ...item,
+        unlock_at_page: item.unlock_at_page || item.page,
+        anchor_id: `entry-${item.entry_id}`,
+        created_at: this.formatTime(item.created_at)
+      }));
+      this.setData({
+        entries: this.data.entries.concat(moreEntries),
+        entryPage: nextPage,
+        entryHasMore: !!(payload.pagination && payload.pagination.has_more)
+      });
+    } catch (error) {
+      wx.showToast({
+        title: formatApiError(error, '加载更多失败'),
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ entryLoadingMore: false });
+    }
   },
 
   onOpenReplyPopup(e) {

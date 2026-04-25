@@ -1,0 +1,29 @@
+.page {
+  padding: 24rpx;
+}
+
+.item {
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #222;
+}
+
+.meta {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.empty,
+.more {
+  text-align: center;
+  color: #999;
+  padding: 40rpx 0;
+}

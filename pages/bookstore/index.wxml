@@ -3,33 +3,47 @@
   <view class="search-bar">
     <view class="search-input-box">
       <icon type="search" size="16" color="#999" />
-      <input class="search-input" placeholder="搜索书名、作者" confirm-type="search" />
+      <input
+        class="search-input"
+        placeholder="搜索书名、作者"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        confirm-type="search"
+        bindconfirm="onSearchConfirm"
+      />
     </view>
   </view>
 
-  <!-- 分类导航 -->
-  <scroll-view class="category-scroll" scroll-x="true" show-scrollbar="false">
-    <view class="category-list">
-      <view 
-        class="category-item {{activeCategory === index ? 'active' : ''}}" 
-        wx:for="{{categories}}" 
-        wx:key="*this"
-        data-index="{{index}}"
-        bindtap="onCategoryTap"
-      >
-        {{item}}
-      </view>
-    </view>
-  </scroll-view>
-
   <!-- 书籍列表 -->
   <view class="book-list">
-    <view class="book-item" wx:for="{{books}}" wx:key="id" data-id="{{item.id}}" bindtap="onBookTap">
-      <image class="book-cover" src="{{item.cover}}" mode="aspectFill"></image>
+    <view wx:if="{{loading}}" class="book-item">
       <view class="book-info">
-        <view class="book-title">{{item.title}}</view>
-        <view class="book-author">{{item.author}}</view>
-        <view class="book-desc">{{item.desc}}</view>
+        <view class="book-title">正在加载书籍...</view>
+      </view>
+    </view>
+    <view wx:elif="{{!books.length}}" class="book-item">
+      <view class="book-info">
+        <view class="book-title">还没有搜索结果</view>
+        <view class="book-desc">输入书名或作者后点击搜索（返回公版书，可在线翻阅）</view>
+      </view>
+    </view>
+    <view wx:for="{{books}}" wx:key="catalog_id" class="book-item" data-id="{{item.catalog_id}}" bindtap="onBookTap">
+      <view class="book-info" style="display:flex;gap:12px;">
+        <image wx:if="{{item.cover_url}}" class="book-cover" mode="aspectFill" src="{{item.cover_url}}" />
+        <view style="flex:1;">
+          <view class="book-title">{{item.title}}</view>
+          <view class="book-author">{{item.author || '作者未知'}}</view>
+          <view class="book-desc">{{item.intro || '暂无书籍简介'}}</view>
+          <view class="book-review" wx:if="{{item.top_review}}">
+            <text class="book-review-tag">优质评价</text>
+            <text>{{item.top_review}}</text>
+          </view>
+          <view class="book-desc">
+            <text>{{item.has_text ? '可在线阅读（公版）' : '暂无纯文本正文'}}</text>
+            <text wx:if="{{item.language}}"> ｜ {{item.language}}</text>
+            <text wx:if="{{item.review_count}}"> ｜ {{item.review_count}} 条评价</text>
+          </view>
+        </view>
       </view>
     </view>
   </view>
