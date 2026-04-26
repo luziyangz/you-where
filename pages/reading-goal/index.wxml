@@ -1,5 +1,23 @@
 <view class="page">
   <view class="card">
+    <view class="progress-block">
+      <view class="progress-title">当前周期进度</view>
+      <view class="metric-row">
+        <text>完成书籍</text>
+        <text>{{progress.completed_books}} / {{progress.target_books}}</text>
+      </view>
+      <view class="progress-track">
+        <view class="progress-fill" style="width: {{progress.book_percent}}%"></view>
+      </view>
+      <view class="metric-row">
+        <text>打卡天数</text>
+        <text>{{progress.active_days}} / {{progress.target_days}}</text>
+      </view>
+      <view class="progress-track">
+        <view class="progress-fill day" style="width: {{progress.day_percent}}%"></view>
+      </view>
+    </view>
+
     <view class="label">周期天数</view>
     <input class="input" type="number" value="{{period_days}}" bindinput="onInputPeriod" />
     <view class="label">目标书籍数</view>

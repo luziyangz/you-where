@@ -33,7 +33,7 @@ Recommended baseline:
 Check unauthorized access:
 
 ```bash
-curl -i https://www.nizaina.online/api/v2/books/current
+curl -i https://www.nizaina.online/api/v2/pairs/current/books/current
 ```
 
 Expected: `401 Unauthorized`.
@@ -41,9 +41,9 @@ Expected: `401 Unauthorized`.
 Check token required on write API:
 
 ```bash
-curl -i -X POST https://www.nizaina.online/api/v2/entries \
+curl -i -X POST https://www.nizaina.online/api/v2/books/demo/entries \
   -H "Content-Type: application/json" \
-  -d "{\"book_id\":\"demo\",\"page\":1,\"note_content\":\"x\"}"
+  -d "{\"page\":1,\"note_content\":\"x\"}"
 ```
 
 Expected: `401 Unauthorized`.

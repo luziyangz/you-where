@@ -5,20 +5,20 @@
   "packOptions": {
     "ignore": [
       {
-        "type": "folder",
-        "value": ".cursor"
+        "value": ".cursor",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "file"
+        "value": "file",
+        "type": "folder"
       },
       {
-        "type": "folder",
-        "value": "__pycache__"
+        "value": "__pycache__",
+        "type": "folder"
       },
       {
-        "type": "suffix",
-        "value": ".md"
+        "value": ".md",
+        "type": "suffix"
       }
     ],
     "include": []

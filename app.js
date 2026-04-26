@@ -1,8 +1,9 @@
-const { clearSession, login, restoreSession } = require('./utils/auth');
+const { clearSession, login, phoneLogin, restoreSession } = require('./utils/auth');
 const { acceptAgreement } = require('./services/api');
 
 const API_BASE_URL_BY_ENV = {
-  develop: 'https://www.nizaina.online/api/v2',
+  // 开发版临时使用阿里云公网 IP + 端口联调；正式上线必须切回备案域名 + HTTPS。
+  develop: 'http://47.99.240.126:18080/api/v2',
   trial: 'https://www.nizaina.online/api/v2',
   release: 'https://www.nizaina.online/api/v2'
 };
@@ -64,7 +65,7 @@ App({
 
   globalData: {
     // 启动时会被 onLaunch 动态覆盖为当前环境对应地址
-    apiBaseUrl: 'https://www.nizaina.online/api/v2',
+    apiBaseUrl: 'http://47.99.240.126:18080/api/v2',
     // 当前小程序环境（develop / trial / release）
     apiEnvVersion: 'develop',
     // API 地址来源（环境映射或本地覆盖）
@@ -80,13 +81,63 @@ App({
     authExpiredNotified: false
   },
 
+  syncUser(user, options = {}) {
+    const nextUser = user || null;
+    this.globalData.user = nextUser;
+    if (options.persist) {
+      if (nextUser) {
+        wx.setStorageSync('user', nextUser);
+      } else {
+        wx.removeStorageSync('user');
+      }
+    }
+  },
+
+  syncPair(pair) {
+    this.globalData.pair = pair || null;
+  },
+
+  syncCurrentBook(book) {
+    this.globalData.currentBook = book || null;
+  },
+
+  syncReadingContext(payload = {}, options = {}) {
+    const hasPair = Object.prototype.hasOwnProperty.call(payload, 'pair');
+    const hasCurrentBook = Object.prototype.hasOwnProperty.call(payload, 'currentBook');
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'user')) {
+      this.syncUser(payload.user, { persist: !!options.persistUser });
+    }
+    if (hasPair) {
+      this.syncPair(payload.pair);
+    }
+    if (hasCurrentBook) {
+      this.syncCurrentBook(payload.currentBook);
+      return;
+    }
+
+    // 部分接口（如 /pair/current）会把 current_book 嵌套在 pair 中返回。
+    // 统一在这里兜底回写，避免页面漏同步后出现全局状态陈旧。
+    if (!hasPair) {
+      return;
+    }
+
+    if (!payload.pair) {
+      this.syncCurrentBook(null);
+      return;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload.pair, 'current_book')) {
+      this.syncCurrentBook(payload.pair.current_book || null);
+    }
+  },
+
   // 将会话状态同步到全局与本地缓存
   setSession(sessionData) {
     this.globalData.token = sessionData.token;
-    this.globalData.user = sessionData.user;
+    this.syncUser(sessionData.user, { persist: true });
     this.globalData.authExpiredNotified = false;
     wx.setStorageSync('token', sessionData.token);
-    wx.setStorageSync('user', sessionData.user);
   },
 
   // 统一处理登录失效：清理状态并给出一次友好提示
@@ -103,17 +154,18 @@ App({
   },
 
   // 执行登录，必要时补充协议确认
-  async loginFlow() {
-    const sessionData = await login();
+  async loginFlow(options = {}) {
+    const sessionData = options.method === 'phone'
+      ? await phoneLogin({ phoneCode: options.phoneCode, debugPhoneNumber: options.debugPhoneNumber })
+      : await login();
     this.setSession(sessionData);
 
     if (sessionData.need_agreement) {
       await acceptAgreement();
-      this.globalData.user = {
+      this.syncUser({
         ...sessionData.user,
         agreement_accepted_at: new Date().toISOString()
-      };
-      wx.setStorageSync('user', this.globalData.user);
+      }, { persist: true });
     }
 
     return this.globalData.user;
@@ -122,9 +174,11 @@ App({
   // 清理登录态并回到未登录状态
   logout() {
     clearSession();
-    this.globalData.user = null;
+    this.syncReadingContext({
+      user: null,
+      pair: null,
+      currentBook: null
+    }, { persistUser: true });
     this.globalData.token = '';
-    this.globalData.pair = null;
-    this.globalData.currentBook = null;
   }
 });

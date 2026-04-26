@@ -9,6 +9,7 @@
       <view class="meta">
         <view class="title">{{book.title}}</view>
         <view class="author">{{book.author || '作者未知'}}</view>
+        <view wx:if="{{book.category_label}}" class="desc">分类：{{book.category_label}}</view>
         <view class="desc">
           {{book.language ? ('语言：' + book.language + ' ｜ ') : ''}}{{book.has_text ? '可在线阅读（公版）' : '暂无正文'}}
         </view>

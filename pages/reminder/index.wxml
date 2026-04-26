@@ -8,6 +8,7 @@
     <input class="input" value="{{remind_time}}" bindinput="onInputTime" />
     <view class="label">时区</view>
     <input class="input" value="{{timezone}}" bindinput="onInputTimezone" />
+    <view class="status-tip" wx:if="{{deliveryMessage}}">{{deliveryMessage}}</view>
     <button class="btn" loading="{{saving}}" bindtap="onSave">保存提醒</button>
   </view>
 </view>

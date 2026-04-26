@@ -45,6 +45,7 @@ def _to_user_dict(user: User) -> Dict[str, Any]:
         "nickname": user.nickname,
         "avatar": user.avatar,
         "join_code": user.join_code,
+        "phone_number": user.phone_number,
         "agreement_accepted_at": user.agreement_accepted_at,
         "join_days": calc_days_since(user.created_at),
     }

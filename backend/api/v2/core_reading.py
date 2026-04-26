@@ -2,22 +2,46 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import hashlib
+import json
+import re
 import secrets
+import time
 import uuid
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode
+from urllib.request import Request as UrlRequest
+from urllib.request import urlopen
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from api.v2.common import calc_days_since, get_active_pair, get_current_user, get_partner_id, get_request_id, ok
+from common.config import settings
 from common.db import get_db_session
 from common.errors import ApiError
-from common.models import Book, Entry, Pair, ReadMark, Reply, SessionModel, User
+from common.locks import acquire_named_locks
+from common.models import ActiveBookLock, ActivePairLock, Book, Entry, Pair, ReadMark, Reply, SessionModel, User
 
 
 router = APIRouter(tags=["v2-core-reading"])
+_wechat_access_token = ""
+_wechat_access_token_expires_at = 0.0
+
+TEST_USERS = {
+    "a": {
+        "open_id": "youzainaye_test_user_a",
+        "nickname": "测试用户A",
+        "join_code": "900001",
+    },
+    "b": {
+        "open_id": "youzainaye_test_user_b",
+        "nickname": "测试用户B",
+        "join_code": "900002",
+    },
+}
 
 
 def _utc_now() -> str:
@@ -43,6 +67,7 @@ def _user_dict(user: User) -> Dict[str, Any]:
         "nickname": user.nickname,
         "avatar": user.avatar,
         "join_code": user.join_code,
+        "phone_number": user.phone_number,
         "agreement_accepted_at": user.agreement_accepted_at,
         "join_days": calc_days_since(user.created_at),
     }
@@ -88,6 +113,17 @@ class LoginPayload(BaseModel):
     debug_open_id: Optional[str] = None
 
 
+class PhoneLoginPayload(BaseModel):
+    code: str
+    phone_code: Optional[str] = None
+    debug_open_id: Optional[str] = None
+    debug_phone_number: Optional[str] = None
+
+
+class TestLoginPayload(BaseModel):
+    role: str = "a"
+
+
 class AgreementPayload(BaseModel):
     accepted: bool = True
 
@@ -108,19 +144,108 @@ class UpdateMePayload(BaseModel):
     nickname: str = Field(min_length=1, max_length=64)
 
 
-@router.post("/auth/login")
-def login(
-    payload: LoginPayload,
-    request_id: str = Depends(get_request_id),
-    db: Session = Depends(get_db_session),
-):
-    open_id = (payload.debug_open_id or "").strip() or f"wx_{hashlib.md5(payload.code.encode('utf-8')).hexdigest()}"
+def _fetch_json(url: str, method: str = "GET", data: Optional[Dict[str, Any]] = None, timeout_seconds: int = 8) -> Dict[str, Any]:
+    body = json.dumps(data or {}).encode("utf-8") if method.upper() != "GET" else None
+    req = UrlRequest(
+        url,
+        data=body,
+        method=method.upper(),
+        headers={"Content-Type": "application/json", "User-Agent": "youzainaye-mini/1.0"},
+    )
+    with urlopen(req, timeout=timeout_seconds) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+    return payload if isinstance(payload, dict) else {}
+
+
+def _exchange_wechat_open_id(code: str, debug_open_id: Optional[str] = None) -> str:
+    if debug_open_id:
+        return debug_open_id.strip()
+
+    if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+        raise ApiError(40003, "未配置微信小程序 AppID/AppSecret，暂不能使用微信登录", 400)
+
+    query = urlencode(
+        {
+            "appid": settings.WECHAT_APP_ID,
+            "secret": settings.WECHAT_APP_SECRET,
+            "js_code": code,
+            "grant_type": "authorization_code",
+        }
+    )
+    payload = _fetch_json(f"https://api.weixin.qq.com/sns/jscode2session?{query}")
+    open_id = str(payload.get("openid") or "").strip()
+    if not open_id:
+        raise ApiError(40001, payload.get("errmsg") or "微信登录凭证无效，请重试", 400)
+    return open_id
+
+
+def _fetch_wechat_access_token() -> str:
+    global _wechat_access_token, _wechat_access_token_expires_at
+    if _wechat_access_token and time.monotonic() < _wechat_access_token_expires_at:
+        return _wechat_access_token
+
+    if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+        raise ApiError(40003, "未配置微信小程序 AppID/AppSecret，暂不能使用手机号登录", 400)
+
+    query = urlencode(
+        {
+            "grant_type": "client_credential",
+            "appid": settings.WECHAT_APP_ID,
+            "secret": settings.WECHAT_APP_SECRET,
+        }
+    )
+    payload = _fetch_json(f"https://api.weixin.qq.com/cgi-bin/token?{query}")
+    access_token = str(payload.get("access_token") or "").strip()
+    if not access_token:
+        raise ApiError(40003, payload.get("errmsg") or "获取微信访问凭证失败", 400)
+    expires_in = int(payload.get("expires_in") or 7200)
+    _wechat_access_token = access_token
+    _wechat_access_token_expires_at = time.monotonic() + max(60, expires_in - 300)
+    return access_token
+
+
+def _normalize_phone_number(value: str) -> str:
+    phone = re.sub(r"\D", "", value or "")
+    if len(phone) < 8 or len(phone) > 15:
+        raise ApiError(40004, "手机号格式不合法", 400)
+    return phone
+
+
+def _exchange_phone_number(phone_code: Optional[str], debug_phone_number: Optional[str] = None) -> str:
+    if debug_phone_number:
+        return _normalize_phone_number(debug_phone_number)
+    if not phone_code:
+        raise ApiError(40004, "缺少手机号授权凭证", 400)
+
+    access_token = _fetch_wechat_access_token()
+    payload = _fetch_json(
+        f"https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token={access_token}",
+        method="POST",
+        data={"code": phone_code},
+    )
+    if int(payload.get("errcode") or 0) != 0:
+        raise ApiError(40004, payload.get("errmsg") or "手机号授权失败，请重试", 400)
+
+    phone_info = payload.get("phone_info") if isinstance(payload.get("phone_info"), dict) else {}
+    return _normalize_phone_number(str(phone_info.get("phoneNumber") or phone_info.get("purePhoneNumber") or ""))
+
+
+def _get_or_create_user(db: Session, open_id: str, phone_number: Optional[str] = None) -> User:
     user = db.execute(select(User).where(User.open_id == open_id)).scalar_one_or_none()
+    if not user and phone_number:
+        user = db.execute(select(User).where(User.phone_number == phone_number)).scalar_one_or_none()
+        if user and user.open_id != open_id:
+            conflict = db.execute(select(User).where(User.open_id == open_id)).scalar_one_or_none()
+            if conflict:
+                raise ApiError(40005, "该微信账号或手机号已绑定其他用户", 400)
+            user.open_id = open_id
+
     if not user:
         now = _utc_now()
         user = User(
             user_id=_new_id("u"),
             open_id=open_id,
+            phone_number=phone_number,
             nickname=f"书友_{open_id[-4:]}",
             avatar="",
             join_code=_join_code(open_id + now),
@@ -129,7 +254,42 @@ def login(
         )
         db.add(user)
         db.flush()
+        return user
 
+    if phone_number and user.phone_number != phone_number:
+        existing = db.execute(select(User).where(User.phone_number == phone_number, User.user_id != user.user_id)).scalar_one_or_none()
+        if existing:
+            raise ApiError(40005, "该手机号已绑定其他用户", 400)
+        user.phone_number = phone_number
+        db.flush()
+    return user
+
+
+def _normalize_test_role(role: str) -> str:
+    value = (role or "a").strip().lower()
+    if value in {"1", "user_a", "test_a"}:
+        return "a"
+    if value in {"2", "user_b", "test_b"}:
+        return "b"
+    if value in TEST_USERS:
+        return value
+    raise ApiError(40006, "测试用户角色仅支持 A 或 B", 400)
+
+
+def _prepare_test_user(db: Session, role: str) -> User:
+    spec = TEST_USERS[_normalize_test_role(role)]
+    user = _get_or_create_user(db, spec["open_id"])
+    conflict = db.execute(select(User).where(User.join_code == spec["join_code"], User.user_id != user.user_id)).scalar_one_or_none()
+    if conflict:
+        conflict.join_code = _join_code(conflict.open_id + _utc_now())
+    user.nickname = spec["nickname"]
+    user.avatar = ""
+    user.join_code = spec["join_code"]
+    db.flush()
+    return user
+
+
+def _create_login_session(db: Session, user: User) -> Dict[str, Any]:
     token = _token()
     session = SessionModel(
         token=token,
@@ -140,14 +300,46 @@ def login(
     db.add(session)
     db.commit()
     data_user = _user_dict(user)
-    return ok(
-        {
-            "token": token,
-            "user": data_user,
-            "need_agreement": not bool(user.agreement_accepted_at),
-        },
-        request_id=request_id,
-    )
+    return {
+        "token": token,
+        "user": data_user,
+        "need_agreement": not bool(user.agreement_accepted_at),
+    }
+
+
+@router.post("/auth/login")
+def login(
+    payload: LoginPayload,
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    open_id = _exchange_wechat_open_id(payload.code, payload.debug_open_id)
+    user = _get_or_create_user(db, open_id)
+    return ok(_create_login_session(db, user), request_id=request_id)
+
+
+@router.post("/auth/phone-login")
+def phone_login(
+    payload: PhoneLoginPayload,
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    open_id = _exchange_wechat_open_id(payload.code, payload.debug_open_id)
+    phone_number = _exchange_phone_number(payload.phone_code, payload.debug_phone_number)
+    user = _get_or_create_user(db, open_id, phone_number=phone_number)
+    return ok(_create_login_session(db, user), request_id=request_id)
+
+
+@router.post("/auth/test-login")
+def test_login(
+    payload: TestLoginPayload,
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    if not settings.ENABLE_TEST_USERS:
+        raise ApiError(40404, "测试用户入口未启用", 404)
+    user = _prepare_test_user(db, payload.role)
+    return ok(_create_login_session(db, user), request_id=request_id)
 
 
 @router.post("/auth/accept-agreement")
@@ -167,7 +359,6 @@ def accept_agreement(
     return ok({"user": _user_dict(user)}, request_id=request_id)
 
 
-@router.get("/me")
 def me(
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
@@ -175,7 +366,6 @@ def me(
     return ok(current_user, request_id=request_id)
 
 
-@router.put("/me")
 def update_me(
     payload: UpdateMePayload,
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -193,7 +383,6 @@ def update_me(
     return ok({"user": _user_dict(user)}, request_id=request_id)
 
 
-@router.get("/me/stats")
 def me_stats(
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
@@ -225,7 +414,6 @@ def me_stats(
     )
 
 
-@router.get("/home")
 def home(
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
@@ -257,7 +445,6 @@ def home(
     return ok(result, request_id=request_id)
 
 
-@router.get("/pair/current")
 def pair_current(
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
@@ -286,7 +473,6 @@ def pair_current(
     return ok({"pair": data}, request_id=request_id)
 
 
-@router.post("/pair/bind")
 def pair_bind(
     payload: BindPayload,
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -298,29 +484,55 @@ def pair_bind(
     target = db.execute(select(User).where(User.join_code == payload.join_code)).scalar_one_or_none()
     if not target:
         raise ApiError(40011, "未找到对应用户，请确认对方共读码是否正确", 400)
-    if get_active_pair(db, current_user["user_id"]):
-        raise ApiError(40012, "你已与其他伙伴共读，请先解绑再绑定新伙伴", 400)
-    if get_active_pair(db, target.user_id):
-        raise ApiError(40012, "对方已与其他伙伴共读，无法绑定", 400)
 
-    now = _utc_now()
-    pair = Pair(pair_id=_new_id("p"), user_a_id=current_user["user_id"], user_b_id=target.user_id, status="active", created_at=now, updated_at=now)
-    db.add(pair)
-    db.commit()
-    return ok(
-        {
-            "pair_id": pair.pair_id,
-            "status": "active",
-            "bind_days": 1,
-            "partner": {"user_id": target.user_id, "nickname": target.nickname, "avatar": target.avatar},
-            "shared_books": 0,
-            "shared_notes": 0,
-        },
-        request_id=request_id,
-    )
+    with acquire_named_locks(f"bind-user:{current_user['user_id']}", f"bind-user:{target.user_id}"):
+        db.execute(
+            select(User)
+            .where(User.user_id.in_([current_user["user_id"], target.user_id]))
+            .order_by(User.user_id.asc())
+            .with_for_update()
+        ).scalars().all()
+
+        if get_active_pair(db, current_user["user_id"]):
+            raise ApiError(40012, "你已与其他伙伴共读，请先解绑再绑定新伙伴", 400)
+        if get_active_pair(db, target.user_id):
+            raise ApiError(40012, "对方已与其他伙伴共读，无法绑定", 400)
+
+        now = _utc_now()
+        pair_id = _new_id("p")
+        pair = Pair(
+            pair_id=pair_id,
+            user_a_id=current_user["user_id"],
+            user_b_id=target.user_id,
+            status="active",
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(pair)
+        db.add_all(
+            [
+                ActivePairLock(user_id=current_user["user_id"], pair_id=pair_id, created_at=now),
+                ActivePairLock(user_id=target.user_id, pair_id=pair_id, created_at=now),
+            ]
+        )
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise ApiError(40012, "你或对方已有正在生效的共读关系", 400)
+        return ok(
+            {
+                "pair_id": pair.pair_id,
+                "status": "active",
+                "bind_days": 1,
+                "partner": {"user_id": target.user_id, "nickname": target.nickname, "avatar": target.avatar},
+                "shared_books": 0,
+                "shared_notes": 0,
+            },
+            request_id=request_id,
+        )
 
 
-@router.post("/pair/unbind")
 def pair_unbind(
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
@@ -331,11 +543,12 @@ def pair_unbind(
         raise ApiError(40402, "当前没有可解绑的共读关系", 404)
     pair.status = "unbound"
     pair.updated_at = _utc_now()
+    db.query(ActivePairLock).filter(ActivePairLock.pair_id == pair.pair_id).delete(synchronize_session=False)
+    db.query(ActiveBookLock).filter(ActiveBookLock.pair_id == pair.pair_id).delete(synchronize_session=False)
     db.commit()
     return ok({"pair_id": pair.pair_id, "status": "unbound"}, request_id=request_id)
 
 
-@router.get("/books")
 def books_list(
     status: Optional[str] = None,
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -354,7 +567,6 @@ def books_list(
     return ok({"books": books}, request_id=request_id)
 
 
-@router.get("/books/{book_id}/entries")
 def book_entries(
     book_id: str,
     page: int = Query(default=1, ge=1),
@@ -484,7 +696,6 @@ def book_entries(
     )
 
 
-@router.post("/books/{book_id}/entries/read")
 def mark_entries_read(
     book_id: str,
     payload: ReadEntriesPayload,
@@ -512,7 +723,6 @@ def mark_entries_read(
     return ok({"book_id": book_id, "last_read_at": target_time}, request_id=request_id)
 
 
-@router.post("/entries/{entry_id}/replies")
 def reply_entry(
     entry_id: str,
     payload: ReplyPayload,

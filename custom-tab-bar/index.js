@@ -1,3 +1,14 @@
+const HOME_TAB = '/pages/home/index';
+
+const isLoggedIn = () => {
+  try {
+    const app = getApp();
+    return !!(app && app.globalData && app.globalData.token && app.globalData.user);
+  } catch (error) {
+    return false;
+  }
+};
+
 Component({
   data: {
     selected: 0,
@@ -39,9 +50,23 @@ Component({
   },
   methods: {
     switchTab(e) {
-      const data = e.currentTarget.dataset
-      const url = data.path
-      wx.switchTab({ url })
+      const data = e.currentTarget.dataset;
+      const url = data.path;
+      const index = Number(data.index);
+
+      if (!isLoggedIn() && url !== HOME_TAB) {
+        wx.showToast({
+          title: '请先登录后使用',
+          icon: 'none'
+        });
+        return;
+      }
+
+      if (this.data.selected === index) {
+        return;
+      }
+
+      wx.switchTab({ url });
     },
     onCenterBtnClick() {
       // 触发全局事件，让当前页面处理（比如弹出添加书籍或记一笔）

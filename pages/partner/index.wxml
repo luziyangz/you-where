@@ -33,14 +33,16 @@
         <text class="my-code-label">我的共读码</text>
         <view class="my-code-value-row">
           <text class="my-code-value" bindtap="onCopyMyJoinCode">{{myJoinCode}}</text>
-          <text class="my-code-inline-copy" bindtap="onCopyMyJoinCode">复制</text>
         </view>
         <text class="my-code-hint">发送数字，或让对方直接扫码绑定</text>
-        <view class="my-qr-box" wx:if="{{myBindQrUrl}}">
+        <view class="my-qr-box" wx:if="{{myBindQrText}}">
           <view class="my-qr-card">
-            <image class="my-qr-image" src="{{myBindQrUrl}}" mode="aspectFit" bindtap="onPreviewMyQr" />
+            <canvas canvas-id="myBindQrCanvas" class="my-qr-canvas" bindtap="onPreviewMyQr"></canvas>
           </view>
-          <text class="my-qr-hint">点击二维码可预览大图</text>
+          <view class="my-qr-actions">
+            <text class="my-qr-hint" bindtap="onPreviewMyQr">预览</text>
+            <text class="my-qr-hint" bindtap="onSaveMyQr">保存</text>
+          </view>
         </view>
       </view>
     </view>
@@ -86,6 +88,24 @@
         <view class="stat-item">
           <view class="stat-num">{{sharedNotes}}</view>
           <view class="stat-label">交流笔记</view>
+        </view>
+      </view>
+
+      <view class="my-code-box bound-code-box" wx:if="{{myNickname}}">
+        <view class="my-code-copy-icon" bindtap="onCopyMyJoinCode">⧉</view>
+        <text class="my-code-label">我的共读码</text>
+        <view class="my-code-value-row">
+          <text class="my-code-value" bindtap="onCopyMyJoinCode">{{myJoinCode}}</text>
+        </view>
+        <text class="my-code-hint">发送数字，或让对方直接扫码查看绑定入口</text>
+        <view class="my-qr-box" wx:if="{{myBindQrText}}">
+          <view class="my-qr-card">
+            <canvas canvas-id="myBindQrCanvas" class="my-qr-canvas" bindtap="onPreviewMyQr"></canvas>
+          </view>
+          <view class="my-qr-actions">
+            <text class="my-qr-hint" bindtap="onPreviewMyQr">预览</text>
+            <text class="my-qr-hint" bindtap="onSaveMyQr">保存</text>
+          </view>
         </view>
       </view>
 

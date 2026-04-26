@@ -6,7 +6,10 @@
       </view>
       <view class="empty-title">登录后查看成就</view>
       <view class="empty-desc">你可以查看累计读过书籍、累计页数和累计笔记。</view>
-      <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+      <view class="auth-actions">
+        <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+        <button class="btn-secondary w-full" open-type="getPhoneNumber" loading="{{phoneLoginLoading}}" bindgetphonenumber="onPhoneLogin">手机号登录</button>
+      </view>
     </view>
   </block>
 
@@ -92,6 +95,27 @@
             <text class="unit">条</text>
           </view>
           <view class="stat-label">累计笔记</view>
+        </view>
+      </view>
+
+      <view class="goal-card">
+        <view class="goal-header">
+          <view class="goal-title">共读目标</view>
+          <view class="goal-link" bindtap="onTapReadingGoal">调整</view>
+        </view>
+        <view class="goal-row">
+          <text>完成书籍</text>
+          <text>{{goalProgress.completed_books}} / {{goalProgress.target_books}}</text>
+        </view>
+        <view class="goal-track">
+          <view class="goal-fill" style="width: {{goalProgress.book_percent}}%"></view>
+        </view>
+        <view class="goal-row">
+          <text>打卡天数</text>
+          <text>{{goalProgress.active_days}} / {{goalProgress.target_days}}</text>
+        </view>
+        <view class="goal-track">
+          <view class="goal-fill day" style="width: {{goalProgress.day_percent}}%"></view>
         </view>
       </view>
 

@@ -67,12 +67,11 @@ export function writeEntries() {
   const page = Math.floor(Math.random() * 200) + 1;
   const clientRequestId = `k6-${__VU}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const payload = JSON.stringify({
-    book_id: BOOK_ID,
     page,
     note_content: "k6 load test note",
     client_request_id: clientRequestId,
   });
-  const res = http.post(`${BASE_URL}/entries`, payload, { headers });
+  const res = http.post(`${BASE_URL}/books/${BOOK_ID}/entries`, payload, { headers });
 
   check(res, {
     "write status is 200 or 409": (r) => r.status === 200 || r.status === 409,

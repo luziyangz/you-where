@@ -1,11 +1,10 @@
 <view class="container">
-  <!-- 搜索栏 -->
   <view class="search-bar">
     <view class="search-input-box">
       <icon type="search" size="16" color="#999" />
       <input
         class="search-input"
-        placeholder="搜索书名、作者"
+        placeholder="搜索书名、作者、主题"
         value="{{keyword}}"
         bindinput="onKeywordInput"
         confirm-type="search"
@@ -14,37 +13,50 @@
     </view>
   </view>
 
-  <!-- 书籍列表 -->
+  <scroll-view class="category-scroll" scroll-x enable-flex>
+    <view class="category-list">
+      <view
+        wx:for="{{categories}}"
+        wx:key="key"
+        class="category-item {{selectedCategory === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onCategoryTap"
+      >
+        {{item.name}}
+      </view>
+    </view>
+  </scroll-view>
+
   <view class="book-list">
-    <view wx:if="{{loading}}" class="book-item">
-      <view class="book-info">
-        <view class="book-title">正在加载书籍...</view>
+    <view wx:if="{{loading && !books.length}}" class="book-item">
+      <view class="book-info no-cover">
+        <view class="book-title">正在加载中文书库...</view>
+        <view class="book-desc">本地书库会优先返回可阅读、可加入共读的中文内容。</view>
       </view>
     </view>
     <view wx:elif="{{!books.length}}" class="book-item">
-      <view class="book-info">
-        <view class="book-title">还没有搜索结果</view>
-        <view class="book-desc">输入书名或作者后点击搜索（返回公版书，可在线翻阅）</view>
+      <view class="book-info no-cover">
+        <view class="book-title">暂无匹配书籍</view>
+        <view class="book-desc">可以切换分类，或搜索《史记》、传习录、塔罗、奇经八脉等关键词。</view>
       </view>
     </view>
     <view wx:for="{{books}}" wx:key="catalog_id" class="book-item" data-id="{{item.catalog_id}}" bindtap="onBookTap">
-      <view class="book-info" style="display:flex;gap:12px;">
-        <image wx:if="{{item.cover_url}}" class="book-cover" mode="aspectFill" src="{{item.cover_url}}" />
-        <view style="flex:1;">
-          <view class="book-title">{{item.title}}</view>
-          <view class="book-author">{{item.author || '作者未知'}}</view>
-          <view class="book-desc">{{item.intro || '暂无书籍简介'}}</view>
-          <view class="book-review" wx:if="{{item.top_review}}">
-            <text class="book-review-tag">优质评价</text>
-            <text>{{item.top_review}}</text>
-          </view>
-          <view class="book-desc">
-            <text>{{item.has_text ? '可在线阅读（公版）' : '暂无纯文本正文'}}</text>
-            <text wx:if="{{item.language}}"> ｜ {{item.language}}</text>
-            <text wx:if="{{item.review_count}}"> ｜ {{item.review_count}} 条评价</text>
-          </view>
+      <image wx:if="{{item.cover_url}}" class="book-cover" mode="aspectFill" src="{{item.cover_url}}" />
+      <view class="book-info {{item.cover_url ? '' : 'no-cover'}}">
+        <view class="book-meta-row">
+          <text class="category-badge">{{item.category_label || '中文书库'}}</text>
+          <text class="book-status">{{item.has_text ? '可加入共读' : '仅展示'}}</text>
+        </view>
+        <view class="book-title">{{item.title}}</view>
+        <view class="book-author">{{item.author || '作者未详'}}</view>
+        <view class="book-desc">{{item.intro || '暂无书籍简介'}}</view>
+        <view class="book-review" wx:if="{{item.top_review}}">
+          <text class="book-review-tag">共读评价</text>
+          <text>{{item.top_review}}</text>
         </view>
       </view>
     </view>
+    <view wx:if="{{loading && books.length}}" class="loading-more">继续加载...</view>
+    <view wx:if="{{!loading && books.length && !hasMore}}" class="loading-more">已加载当前分类全部书籍</view>
   </view>
 </view>

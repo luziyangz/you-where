@@ -95,6 +95,31 @@
   flex-direction: column;
 }
 
+.book-info.no-cover {
+  margin-left: 0;
+}
+
+.book-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.category-badge {
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #E8F5E9;
+  color: #047857;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.book-status {
+  color: #9CA3AF;
+  font-size: 22rpx;
+}
+
 .book-title {
   font-size: 32rpx;
   font-weight: bold;
@@ -141,4 +166,11 @@
   font-size: 20rpx;
   color: #047857;
   background: #d1fae5;
+}
+
+.loading-more {
+  padding: 20rpx 0 40rpx;
+  text-align: center;
+  color: #9CA3AF;
+  font-size: 24rpx;
 }

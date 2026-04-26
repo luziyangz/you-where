@@ -1,29 +1,41 @@
-# 使用官方轻量级 Python 镜像
-FROM python:3.10-slim
+# syntax=docker/dockerfile:1
+FROM python:3.11-slim-bookworm
 
-# 设置工作目录
 WORKDIR /app
 
-# 设置环境变量
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_INDEX_URL=${PIP_INDEX_URL} \
+    PIP_TRUSTED_HOST=mirrors.aliyun.com
 
-# 安装系统依赖（如 MySQL 客户端库）
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    default-libmysqlclient-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+RUN set -eux; \
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i \
+        -e 's|http://deb.debian.org/debian|http://mirrors.aliyun.com/debian|g' \
+        -e 's|http://security.debian.org/debian-security|http://mirrors.aliyun.com/debian-security|g' \
+        /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+      ca-certificates \
+      gcc \
+      pkg-config; \
+    rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件并安装
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && python -m pip install --no-cache-dir -r requirements.txt
 
-# 复制项目代码
 COPY . .
 
-# 暴露 FastAPI 默认端口
+RUN chmod +x /app/scripts/docker_entrypoint.sh \
+    && useradd --create-home --shell /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 8000
 
-# 启动命令
-CMD ["uvicorn", "app_main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/scripts/docker_entrypoint.sh"]
+CMD ["uvicorn", "app_main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]

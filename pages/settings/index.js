@@ -1,4 +1,10 @@
+const { requireLogin } = require('../../utils/auth-gate');
+
 Page({
+  onShow() {
+    requireLogin({ message: '请先登录后进入设置' });
+  },
+
   onTapPrivacy() {
     wx.navigateTo({
       url: '/pages/privacy-policy/index'

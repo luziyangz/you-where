@@ -83,7 +83,7 @@ def test_e2e_home_partner_progress_reply(client, seed_catalog):
     tb, _ = _login(client, "open_e2e_b")
 
     # 伙伴绑定
-    bind = client.post("/api/v2/pair/bind", json={"join_code": ua["join_code"]}, headers=_auth(tb))
+    bind = client.post("/api/v2/pairs", json={"join_code": ua["join_code"]}, headers=_auth(tb))
     assert bind.status_code == 200, bind.text
 
     # 首页聚合可用
@@ -98,15 +98,15 @@ def test_e2e_home_partner_progress_reply(client, seed_catalog):
 
     # 双方记录进度，a 写笔记，b 回复
     e1 = client.post(
-        "/api/v2/entries",
-        json={"book_id": book_id, "page": 1, "note_content": "第一条"},
+        f"/api/v2/books/{book_id}/entries",
+        json={"page": 1, "note_content": "第一条"},
         headers=_auth(ta),
     )
     assert e1.status_code == 200, e1.text
 
     e2 = client.post(
-        "/api/v2/entries",
-        json={"book_id": book_id, "page": 1, "note_content": ""},
+        f"/api/v2/books/{book_id}/entries",
+        json={"page": 1, "note_content": ""},
         headers=_auth(tb),
     )
     assert e2.status_code == 200, e2.text
@@ -137,9 +137,43 @@ def test_e2e_home_partner_progress_reply(client, seed_catalog):
     assert reply.status_code == 200, reply.text
 
     # 已读标记可写入
-    mark = client.post(
-        f"/api/v2/books/{book_id}/entries/read",
+    mark = client.put(
+        f"/api/v2/books/{book_id}/read-mark",
         json={"last_entry_id": target["entry_id"]},
+        headers=_auth(tb),
+    )
+    assert mark.status_code == 200, mark.text
+
+
+def test_rest_compatible_reading_aliases_cover_main_flow(client, seed_catalog):
+    ta, ua = _login(client, "open_e2e_rest_a")
+    tb, _ = _login(client, "open_e2e_rest_b")
+
+    bind = client.post("/api/v2/pairs", json={"join_code": ua["join_code"]}, headers=_auth(tb))
+    assert bind.status_code == 200, bind.text
+
+    create_book = client.post("/api/v2/books", json={"catalog_id": "gutendex_e2e"}, headers=_auth(ta))
+    assert create_book.status_code == 200, create_book.text
+    book_id = create_book.json()["data"]["book_id"]
+
+    current_book = client.get("/api/v2/pairs/current/books/current", headers=_auth(ta))
+    assert current_book.status_code == 200
+    assert current_book.json()["data"]["book"]["book_id"] == book_id
+
+    entry = client.post(
+        f"/api/v2/books/{book_id}/entries",
+        json={"page": 1, "note_content": "REST alias"},
+        headers=_auth(ta),
+    )
+    assert entry.status_code == 200, entry.text
+
+    entries = client.get(f"/api/v2/books/{book_id}/entries", headers=_auth(tb))
+    assert entries.status_code == 200
+    first_entry_id = entries.json()["data"]["entries"][0]["entry_id"]
+
+    mark = client.put(
+        f"/api/v2/books/{book_id}/read-mark",
+        json={"last_entry_id": first_entry_id},
         headers=_auth(tb),
     )
     assert mark.status_code == 200, mark.text

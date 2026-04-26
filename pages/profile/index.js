@@ -1,4 +1,4 @@
-const { fetchProfileMe, fetchProfileStats, updateMe } = require('../../services/api');
+const { fetchProfileMe, fetchProfileStats, fetchReadingGoal, updateMe } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
 
 const app = getApp();
@@ -7,11 +7,20 @@ Page({
   data: {
     isLogin: false,
     loginLoading: false,
+    phoneLoginLoading: false,
     user: null,
     stats: {
       total_books: 0,
       total_pages: 0,
       total_entries: 0
+    },
+    goalProgress: {
+      completed_books: 0,
+      target_books: 1,
+      book_percent: 0,
+      active_days: 0,
+      target_days: 20,
+      day_percent: 0
     },
     editingNickname: false,
     nicknameDraft: '',
@@ -22,7 +31,7 @@ Page({
     this.initPage();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
-        selected: 1,
+        selected: 3,
         hasBook: !!app.globalData.currentBook,
         hasPartner: !!app.globalData.pair
       });
@@ -40,7 +49,8 @@ Page({
           total_books: 0,
           total_pages: 0,
           total_entries: 0
-        }
+        },
+        goalProgress: this.normalizeGoalProgress()
       });
       return;
     }
@@ -50,11 +60,17 @@ Page({
 
   async loadProfileData() {
     try {
-      const [profileRes, stats] = await Promise.all([fetchProfileMe(), fetchProfileStats()]);
+      const [profileRes, stats, goalRes] = await Promise.all([
+        fetchProfileMe(),
+        fetchProfileStats(),
+        fetchReadingGoal()
+      ]);
       const me = profileRes.user || null;
       const partner = profileRes.partner || null;
-      app.globalData.user = me;
-      app.globalData.pair = partner ? { partner } : null;
+      app.syncReadingContext({
+        user: me,
+        pair: partner ? { partner } : null
+      }, { persistUser: true });
 
       this.setData({
         isLogin: true,
@@ -62,7 +78,8 @@ Page({
           ...me,
           partner
         },
-        stats
+        stats,
+        goalProgress: this.normalizeGoalProgress(goalRes.progress || {})
       });
     } catch (error) {
       if (error.code === 401) {
@@ -91,6 +108,52 @@ Page({
       });
     } finally {
       this.setData({ loginLoading: false });
+    }
+  },
+
+  normalizeGoalProgress(progress = {}) {
+    const targetBooks = Math.max(Number(progress.target_books) || 1, 1);
+    const targetDays = Math.max(Number(progress.target_days) || 1, 1);
+    const completedBooks = Math.max(Number(progress.completed_books) || 0, 0);
+    const activeDays = Math.max(Number(progress.active_days) || 0, 0);
+    const bookPercent = Math.min(Math.round((completedBooks / targetBooks) * 100), 100);
+    const dayPercent = Math.min(Math.round((activeDays / targetDays) * 100), 100);
+    return {
+      completed_books: completedBooks,
+      target_books: targetBooks,
+      book_percent: bookPercent,
+      active_days: activeDays,
+      target_days: targetDays,
+      day_percent: dayPercent
+    };
+  },
+
+  async onPhoneLogin(e) {
+    const detail = e.detail || {};
+    if (!detail.code && !detail.phoneNumber) {
+      wx.showToast({ title: '需要授权手机号后继续', icon: 'none' });
+      return;
+    }
+
+    this.setData({ phoneLoginLoading: true });
+    try {
+      await app.loginFlow({
+        method: 'phone',
+        phoneCode: detail.code,
+        debugPhoneNumber: detail.phoneNumber
+      });
+      await this.loadProfileData();
+      wx.showToast({
+        title: '登录成功',
+        icon: 'success'
+      });
+    } catch (error) {
+      wx.showToast({
+        title: formatApiError(error, '手机号登录失败'),
+        icon: 'none'
+      });
+    } finally {
+      this.setData({ phoneLoginLoading: false });
     }
   },
 
@@ -135,8 +198,7 @@ Page({
       const payload = await updateMe({ nickname });
       const updatedUser = payload.user || null;
       if (updatedUser) {
-        app.globalData.user = updatedUser;
-        wx.setStorageSync('user', updatedUser);
+        app.syncUser(updatedUser, { persist: true });
         this.setData({
           user: {
             ...this.data.user,
@@ -173,7 +235,8 @@ Page({
             total_books: 0,
             total_pages: 0,
             total_entries: 0
-          }
+          },
+          goalProgress: this.normalizeGoalProgress()
         });
         wx.showToast({
           title: '已退出登录',

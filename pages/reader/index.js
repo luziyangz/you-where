@@ -1,5 +1,6 @@
-const { createEntry, fetchCurrentBook, storeReadPage } = require('../../services/api');
+const { createEntry, fetchHome, storeReadPage } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
 
 const app = getApp();
 
@@ -22,7 +23,31 @@ Page({
   },
 
   onShow() {
+    if (!requireLogin({ message: '请先登录后阅读' })) {
+      return;
+    }
     this.loadPage();
+  },
+
+  async syncHomeContext() {
+    if (!app.globalData.token) {
+      return null;
+    }
+
+    try {
+      const payload = await fetchHome();
+      app.syncReadingContext({
+        user: payload.user,
+        pair: payload.pair,
+        currentBook: payload.current_book || null
+      }, { persistUser: true });
+      return payload;
+    } catch (error) {
+      if (error.code === 401) {
+        app.logout();
+      }
+      throw error;
+    }
   },
 
   async loadPage() {
@@ -73,8 +98,8 @@ Page({
     try {
       // 仅当已经存在“正在共读的书”时才同步进度。
       // 用户可能只是预览阅读（尚未加入共读），此时给出提示。
-      const currentBookRes = await fetchCurrentBook();
-      const book = currentBookRes.book || null;
+      const homeData = await this.syncHomeContext();
+      const book = homeData && homeData.current_book ? homeData.current_book : null;
       if (!book) {
         wx.showToast({ title: '请先在书籍详情页「加入共读」', icon: 'none' });
         return;
@@ -85,6 +110,10 @@ Page({
         page: Number(this.data.pageData && this.data.pageData.page) || 1,
         note_content: ''
       });
+      const latestHomeData = await this.syncHomeContext();
+      if (latestHomeData && latestHomeData.current_book) {
+        app.syncCurrentBook(latestHomeData.current_book);
+      }
       wx.showToast({ title: '进度已同步', icon: 'success' });
     } catch (error) {
       wx.showToast({

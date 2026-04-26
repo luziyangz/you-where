@@ -46,6 +46,10 @@ build/
 backend/data/app.db
 backend/__pycache__/
 backend/.pytest_cache/
+backend/.deploy/
+backend/nginx/certs/*
+!backend/nginx/certs/.gitkeep
+backend/nginx/logs/
 .cursor/
 .agents/
 .trae/

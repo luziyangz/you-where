@@ -1,261 +1,274 @@
-# 阿里云轻量应用服务器部署指南 (FastAPI + MySQL)
+# 阿里云 Docker 部署指南
 
-本指南旨在帮助您将后端服务部署到阿里云轻量应用服务器（建议使用 Ubuntu 22.04 LTS 或 CentOS 7.9+ 系统）。您可以选择**直接在 Linux 系统部署**或使用 **Docker 容器化部署**。
+目标服务器：`47.99.240.126`
 
----
+当前约束：
 
-## 方案一：使用 Docker 容器化部署 (推荐)
+- `www.nizaina.com` 未备案，在大陆云服务器上会被拦截，当前只能使用 `IP + 端口` 做开发/联调。
+- SSL 证书通常绑定域名，直接用 `https://47.99.240.126:端口` 会出现证书域名不匹配。正式小程序上线仍需要“已备案域名 + HTTPS + 微信后台 request 合法域名”。
+- 本指南默认使用 `http://47.99.240.126:18080` 暴露后端网关，MySQL 不对公网开放。
 
-Docker 部署方式更简单，能自动处理数据库和 Python 环境的隔离，是目前最推荐的生产环境部署方式。
+## 一、部署内容
 
-### 1.1 安装 Docker
-在服务器上运行以下命令：
-```bash
-# 安装 Docker
-curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
-# 启动并设置开机自启
-sudo systemctl start docker
-sudo systemctl enable docker
-# 安装 Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-```
+Docker Compose 会启动三个服务：
 
-### 1.2 准备配置文件
-上传 `backend` 目录下的所有文件到服务器（推荐上传到 `admin` 用户的家目录，如 `/home/admin/youzainaye-backend`）。
+- `you_where_mysql`：MySQL 8.0，内部网络访问，数据持久化到 Docker volume。
+- `you_where_backend`：FastAPI 后端，内部监听 `8000`，自动等待 MySQL 并执行表结构更新。
+- `you_where_nginx`：Nginx 网关，公网暴露 `18080 -> 80`，可选 `18443 -> 443`。
 
-在**本地终端**执行以下命令进行上传：
-```bash
-# 将整个 backend 目录上传到服务器
-scp -r ./backend admin@您的服务器公网IP:/home/admin/youzainaye-backend
-```
-
-上传完成后，在服务器上创建 `.env` 文件：
-```bash
-cd /home/admin/youzainaye-backend
-ls
-nano .env
-```
-确保 `.env` 中的数据库配置与 `docker-compose.yml` 中的环境变量一致。
-
-### 1.3 启动服务
-```bash
-# 构建并后台启动所有容器
-sudo docker-compose up -d
-```
-Docker 会自动完成以下操作：
-1. 下载并启动 MySQL 8.0 容器。
-2. 自动运行 `scripts/mysql_init.sql` 进行数据库初始化。
-3. 构建并启动 FastAPI 后端容器。
-
-### 1.4 验证
-访问 `http://您的服务器IP:8000/health`。
-
----
-
-## 方案二：直接在 Linux 系统部署 (传统方式)
-
-### 2.1 阿里云控制台设置
-- **防火墙**: 在阿里云控制台 -> 轻量应用服务器 -> 安全 -> 防火墙中，开放以下端口：
-  - `80` (HTTP)
-  - `443` (HTTPS, 如果需要)
-  - `3306` (MySQL, 仅当您需要从外部管理数据库时开放，建议生产环境不开放)
-  - `8000` (FastAPI 默认测试端口，生产环境通常隐藏在 Nginx 后)
-
-### 2.2 服务器环境安装
-连接到服务器后，执行以下命令安装基础环境：
+部署后接口地址：
 
 ```bash
-# 更新系统
-sudo apt update && sudo apt upgrade -y
-
-# 安装 Python 和虚拟环境
-sudo apt install -y python3-pip python3-venv
-
-# 安装 MySQL (如果服务器没自带)
-sudo apt install -y mysql-server
-
-# 安装 Nginx (用于反向代理)
-sudo apt install -y nginx
+健康检查: http://47.99.240.126:18080/health
+Nginx 自检: http://47.99.240.126:18080/nginx-health
+API Base: http://47.99.240.126:18080/api/v2
 ```
 
-## 3. 代码上传
+## 二、阿里云安全组
 
-将本地 `backend` 目录下的所有文件上传到服务器。建议上传到 `admin` 用户的家目录下：
+在阿里云控制台放行：
+
+```text
+22/tcp      SSH
+18080/tcp   当前后端 HTTP 网关
+18443/tcp   可选 HTTPS 测试端口
+```
+
+不要放行 `3306/tcp`，MySQL 只应在 Docker 内网访问。
+
+## 三、本地同步并自动部署
+
+Windows PowerShell：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backend\scripts\sync_to_aliyun.ps1 `
+  -Server 47.99.240.126 `
+  -User root `
+  -Port 22 `
+  -KeyPath C:\path\to\id_rsa `
+  -RemoteDir /opt/you-where-backend
+```
+
+如果服务器使用密码登录，去掉 `-KeyPath`，命令会进入 SSH 密码输入流程：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backend\scripts\sync_to_aliyun.ps1 -User root
+```
+
+Linux/macOS：
 
 ```bash
-# 在本地运行：
-scp -r ./backend admin@您的服务器公网IP:/home/admin/youzainaye-backend
+SERVER=47.99.240.126 USER_NAME=root KEY_PATH=~/.ssh/id_rsa sh backend/scripts/sync_to_aliyun.sh
 ```
 
----
+同步脚本会：
 
-## 方案三：域名解析与小程序上线 (打通最后一步)
+- 打包 `backend` 目录，排除 `.env`、本地数据库、缓存和日志。
+- 上传到服务器 `/tmp/you-where-backend.tar.gz`。
+- 解压到 `/opt/you-where-backend`。
+- 在云端执行 `sudo sh scripts/cloud_deploy.sh`。
 
-要让小程序能正式访问云服务器，必须满足：**已备案域名 + HTTPS 证书 + 微信后台配置**。
+## 四、云端自动部署脚本
 
-### 3.1 域名解析 (DNS)
-在阿里云域名管理后台，为您已备案的域名 `nizaina.online` 添加解析记录：
-- **记录类型**: `A`
-- **主机记录**: `www` (或 `@`)
-- **解析线路**: 默认
-- **记录值**: `47.99.240.126`
-
-解析完成后，访问 `http://www.nizaina.online:8000/health` 应能看到结果。
-
-### 3.2 申请 SSL 证书 (开启 HTTPS)
-微信小程序**强制要求**使用 HTTPS 协议（443 端口）。
-1. 在阿里云控制台搜索“数字证书管理服务”。
-2. 申请“免费证书”（每个账号通常有 20 个额度）。
-3. 证书签发后，下载 **Nginx** 格式的证书文件（包含 `.pem` 和 `.key`）。
-
-### 3.3 配置 Nginx 反向代理
-在服务器上安装并配置 Nginx，将 HTTPS 请求转发到 Docker 容器的 8000 端口。
-
-```nginx
-# /etc/nginx/sites-available/default 示例配置
-server {
-    listen 443 ssl;
-    server_name www.nizaina.online;
-
-    ssl_certificate /etc/nginx/cert/www.nizaina.online.pem;
-    ssl_certificate_key /etc/nginx/cert/www.nizaina.online.key;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
-### 3.4 微信小程序后台配置
-1. 登录 [微信公众平台](https://mp.weixin.qq.com/)。
-2. 进入 **开发** -> **开发管理** -> **开发设置**。
-3. 找到 **服务器域名**，在 `request合法域名` 中添加：
-   `https://www.nizaina.online`
-
-### 3.5 验证上线
-在小程序代码中，将 API 请求地址改为：
-`https://www.nizaina.online/your-api-endpoint`
-pip install --upgrade pip
-pip install -r requirements.txt
-```
-
-## 5. 数据库配置
-
-### 5.1 创建数据库
-```bash
-sudo mysql -u root -p
-```
-在 MySQL 终端中执行：
-```sql
-CREATE DATABASE youzainaye CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
--- 创建专门的数据库用户（推荐）
-CREATE USER 'youzainaye_user'@'localhost' IDENTIFIED BY '您的强密码';
-GRANT ALL PRIVILEGES ON youzainaye.* TO 'youzainaye_user'@'localhost';
-FLUSH PRIVILEGES;
-EXIT;
-```
-
-### 5.2 初始化表结构
-修改 `.env` 文件（参照 `.env.example`）：
-```bash
-cp .env.example .env
-nano .env
-```
-填写刚才创建的数据库信息。然后运行初始化脚本：
-```bash
-python scripts/init_mysql_schema.py
-```
-
-## 6. 进程管理 (使用 Systemd)
-
-创建一个 systemd 服务文件，确保服务在崩溃或重启后自动运行。
+如果已经手动把 `backend` 目录放到服务器，可直接在服务器执行：
 
 ```bash
-sudo nano /etc/systemd/system/youzainaye.service
+cd /opt/you-where-backend
+sudo sh scripts/cloud_deploy.sh
 ```
 
-填入以下内容：
-```ini
-[Unit]
-Description=YouZaiNaYe FastAPI Backend
-After=network.target
-
-[Service]
-User=root
-Group=www-data
-WorkingDirectory=/var/www/youzainaye-backend
-Environment="PATH=/var/www/youzainaye-backend/venv/bin"
-ExecStart=/var/www/youzainaye-backend/venv/bin/uvicorn app_main:app --host 0.0.0.0 --port 8000
-
-[Install]
-WantedBy=multi-user.target
-```
-
-启动并使服务开机自启：
-```bash
-sudo systemctl daemon-reload
-sudo systemctl start youzainaye
-sudo systemctl enable youzainaye
-```
-
-## 7. Nginx 反向代理
-
-配置 Nginx 将 80 端口流量转发到 FastAPI。
+如果服务器上已经有稳定运行的 Docker 环境，并且不希望脚本重写 `/etc/docker/daemon.json` 或重启 Docker，可执行：
 
 ```bash
-sudo nano /etc/nginx/sites-available/youzainaye
+cd /opt/you-where-backend
+sudo env CONFIGURE_DOCKER_MIRRORS=0 sh scripts/cloud_deploy.sh
 ```
 
-填入内容：
-```nginx
-server {
-    listen 80;
-    server_name 您的域名或服务器IP;
+脚本会自动完成：
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+- 安装基础工具。
+- 安装 Docker，并优先使用阿里云安装镜像。
+- 默认配置 Docker 国内镜像源；如设置 `CONFIGURE_DOCKER_MIRRORS=0` 则跳过。
+- 首次部署时自动生成 `.env` 和 MySQL 强密码。
+- 构建并启动 MySQL、后端、Nginx。
+- 检查 `http://127.0.0.1:18080/health`。
 
-启用配置并重启 Nginx：
+部署后建议执行：
+
 ```bash
-sudo ln -s /etc/nginx/sites-available/youzainaye /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
+curl -i http://127.0.0.1:18080/nginx-health
+curl -i http://127.0.0.1:18080/health
+curl -i http://47.99.240.126:18080/health
 ```
 
-## 8. 验证
-访问 `http://您的服务器IP/health`，如果返回 `{"status": "ok"}`，则部署成功！
+如果 `127.0.0.1:18080/health` 正常，但公网 IP 超时，优先检查阿里云安全组和服务器系统防火墙，而不是后端容器。
 
-## 9. 上线前测试环境校验
+如果公网返回 `502 Bad Gateway`，先区分是 Nginx 可达但后端不可达，还是公网入口不可达：
 
-在正式上线前，建议按以下顺序执行：
-
-1. 回归测试
 ```bash
-cd backend
-pytest test_v2_core_reading.py test_v2_store_reading.py test_v2_e2e_flow.py test_v2_profile.py -q
+curl -i http://127.0.0.1:18080/nginx-health
+curl -i http://127.0.0.1:18080/health
+sudo docker logs -f you_where_nginx
+sudo docker logs you_where_nginx --tail=100
+sudo docker logs you_where_backend --tail=100
+sudo docker exec you_where_nginx wget -S -O- http://backend:8000/health
 ```
 
-2. 并发压测（k6）
+安全组建议：
+
+```text
+入方向 TCP 18080  来源 0.0.0.0/0 或你的固定公网 IP/32
+```
+
+CentOS/Alibaba Cloud Linux 如果启用了 firewalld：
+
 ```bash
-cd backend
-set BASE_URL=https://www.nizaina.online/api/v2
-set BOOK_ID=<your_book_id>
-set TOKEN=<jwt_token>
-k6 run scripts/loadtest_entries.js
+sudo firewall-cmd --state
+sudo firewall-cmd --permanent --add-port=18080/tcp
+sudo firewall-cmd --reload
 ```
 
-3. 安全冒烟
-- 未登录访问受保护接口应返回 `401`。
-- 无效 Token 访问写接口应返回 `401`。
+Ubuntu 如果启用了 ufw：
 
-详细步骤请参考：`scripts/test_env_guide.md`。
+```bash
+sudo ufw allow 18080/tcp
+sudo ufw status
+```
+
+## 五、环境变量
+
+首次云端部署会自动创建 `.env`。如需手动配置，可参考 `.env.example`：
+
+```bash
+cd /opt/you-where-backend
+sudo cp .env.example .env
+sudo nano .env
+```
+
+关键项：
+
+```env
+DB_BACKEND=mysql
+MYSQL_ROOT_PASSWORD=replace_with_a_strong_root_password
+MYSQL_USER=you_where
+MYSQL_PASSWORD=replace_with_a_strong_app_password
+MYSQL_DB=you_where
+HTTP_PORT=18080
+HTTPS_PORT=18443
+PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+STORE_ENABLE_NETWORK=0
+ENABLE_TEST_USERS=0
+```
+
+生产环境必须保持 `ENABLE_TEST_USERS=0`。
+
+## 六、隐藏测试用户
+
+测试用户不会出现在小程序界面。如需在云端开发环境使用固定共读码做绑定测试，先显式写入真实 `users` 表：
+
+```bash
+cd /opt/you-where-backend
+sudo docker compose exec backend python scripts/seed_test_users.py
+```
+
+固定共读码：
+
+```text
+测试用户 A: 900001
+测试用户 B: 900002
+```
+
+如果测试用户已被绑定，想重复测试绑定流程，可重置测试用户相关活跃关系：
+
+```bash
+sudo docker compose exec backend python scripts/seed_test_users.py --reset-active-pairs
+```
+
+如果希望每次容器启动都自动补齐测试用户，可在 `.env` 中设置：
+
+```env
+SEED_TEST_USERS=1
+```
+
+注意：`SEED_TEST_USERS=1` 只负责写入隐藏测试用户；`ENABLE_TEST_USERS=1` 会开启 `/api/v2/auth/test-login` 接口。云端开发一般只需要执行种子脚本，不建议开启 `ENABLE_TEST_USERS`。
+
+## 七、SSL 证书可选配置
+
+当前未备案域名不适合作为正式小程序后端域名。若只是预留配置，证书文件放到：
+
+```text
+backend/nginx/certs/www.nizaina.com.pem
+backend/nginx/certs/www.nizaina.com.key
+```
+
+在服务器上启用示例配置：
+
+```bash
+cd /opt/you-where-backend/nginx/conf.d
+sudo cp ssl.conf.example ssl.conf
+sudo docker compose -f /opt/you-where-backend/docker-compose.yml restart nginx
+```
+
+启用后测试地址为：
+
+```bash
+https://www.nizaina.com:18443/health
+```
+
+注意：如果域名仍未备案或被拦截，该地址仍无法稳定访问；如果用 IP 访问 HTTPS，浏览器和小程序会因证书域名不匹配报错。
+
+## 八、运维命令
+
+进入服务器目录：
+
+```bash
+cd /opt/you-where-backend
+```
+
+查看状态：
+
+```bash
+sudo docker compose ps
+```
+
+查看日志：
+
+```bash
+sudo docker compose logs -f backend
+sudo docker compose logs -f nginx
+sudo docker compose logs -f mysql
+```
+
+重启：
+
+```bash
+sudo docker compose restart
+```
+
+更新部署：
+
+```bash
+sudo sh scripts/cloud_deploy.sh
+```
+
+备份 MySQL：
+
+```bash
+sudo docker exec you_where_mysql sh -c 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" you_where' > you_where_backup.sql
+```
+
+## 九、小程序联调配置
+
+当前开发联调可把小程序 API Base 配置为：
+
+```text
+http://47.99.240.126:18080/api/v2
+```
+
+正式版发布前必须切换为：
+
+```text
+https://已备案域名/api/v2
+```
+
+并在微信公众平台配置 `request 合法域名`。

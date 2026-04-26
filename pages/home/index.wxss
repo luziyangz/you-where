@@ -131,6 +131,23 @@
   flex-shrink: 0;
 }
 
+.auth-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: #07c160;
+  border: 2rpx solid rgba(7, 193, 96, 0.35);
+}
+
+.btn-secondary::after {
+  border: none;
+}
+
 /* 共读码卡片 */
 .code-card {
   width: 100%;

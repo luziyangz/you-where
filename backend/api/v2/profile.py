@@ -51,24 +51,23 @@ def profile_stats(
     user_id = current_user["user_id"]
     pair_ids = db.execute(
         select(Pair.pair_id).where(
-            Pair.status == "active",
+            Pair.status.in_(["active", "unbound"]),
             or_(Pair.user_a_id == user_id, Pair.user_b_id == user_id),
         )
     ).scalars().all()
 
     total_books = 0
-    total_pages = 0
     total_entries = db.execute(select(func.count(Entry.entry_id)).where(Entry.user_id == user_id)).scalar() or 0
+    progress_rows = db.execute(
+        select(Entry.book_id, func.max(Entry.page).label("max_page"))
+        .where(Entry.user_id == user_id)
+        .group_by(Entry.book_id)
+    ).all()
+    total_pages = sum(int(row.max_page or 0) for row in progress_rows)
     if pair_ids:
         total_books = db.execute(
             select(func.count(Book.book_id)).where(and_(Book.pair_id.in_(pair_ids), Book.status == "finished"))
         ).scalar() or 0
-        progress_rows = db.execute(
-            select(Entry.book_id, func.max(Entry.page).label("max_page"))
-            .where(Entry.user_id == user_id)
-            .group_by(Entry.book_id)
-        ).all()
-        total_pages = sum(int(row.max_page or 0) for row in progress_rows)
 
     return ok(
         {

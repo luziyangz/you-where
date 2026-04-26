@@ -1,44 +1,86 @@
-version: '3.8'
-
 services:
-  db:
+  mysql:
     image: mysql:8.0
-    container_name: youzainaye_db
-    restart: always
+    container_name: you_where_mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+      - --max_connections=300
     environment:
-      MYSQL_DATABASE: ${MYSQL_DB:-youzainaye}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
-      MYSQL_USER: ${MYSQL_USER:-youzainaye_user}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-user_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${MYSQL_DB:-you_where}
+      MYSQL_USER: ${MYSQL_USER:-you_where}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      TZ: Asia/Shanghai
     volumes:
       - mysql_data:/var/lib/mysql
-      # 挂载初始化 SQL 脚本
-      - ./scripts/mysql_init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "3306:3306"
+      - ./scripts/mysql_init.sql:/docker-entrypoint-initdb.d/01_mysql_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
-      - app_network
+      - you_where_net
 
   backend:
-    build: .
-    container_name: youzainaye_backend
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://mirrors.aliyun.com/pypi/simple/}
+    container_name: you_where_backend
+    restart: unless-stopped
     environment:
-      - DB_BACKEND=mysql
-      - MYSQL_HOST=db
-      - MYSQL_PORT=3306
-      - MYSQL_USER=${MYSQL_USER:-youzainaye_user}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-user_password}
-      - MYSQL_DB=${MYSQL_DB:-youzainaye}
+      DB_BACKEND: mysql
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-you_where}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      MYSQL_DB: ${MYSQL_DB:-you_where}
+      MYSQL_POOL_SIZE: ${MYSQL_POOL_SIZE:-10}
+      MYSQL_MAX_OVERFLOW: ${MYSQL_MAX_OVERFLOW:-20}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
+      WECHAT_REMINDER_TEMPLATE_ID: ${WECHAT_REMINDER_TEMPLATE_ID:-}
+      STORE_ENABLE_NETWORK: ${STORE_ENABLE_NETWORK:-0}
+      ENABLE_TEST_USERS: ${ENABLE_TEST_USERS:-0}
+      SEED_TEST_USERS: ${SEED_TEST_USERS:-0}
+      TZ: Asia/Shanghai
     depends_on:
-      - db
-    ports:
-      - "8000:8000"
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
     networks:
-      - app_network
+      - you_where_net
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: you_where_nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-18080}:80"
+      - "${HTTPS_PORT:-18443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - you_where_net
 
 networks:
-  app_network:
+  you_where_net:
     driver: bridge
 
 volumes:

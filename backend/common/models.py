@@ -10,6 +10,7 @@ class User(Base):
 
     user_id = Column(String(64), primary_key=True)
     open_id = Column(String(128), nullable=False, unique=True)
+    phone_number = Column(String(32), nullable=True, unique=True)
     nickname = Column(String(64), nullable=False)
     avatar = Column(String(512), nullable=False, default="")
     join_code = Column(String(16), nullable=False, unique=True)
@@ -37,6 +38,14 @@ class Pair(Base):
     updated_at = Column(String(64), nullable=False)
 
 
+class ActivePairLock(Base):
+    __tablename__ = "active_pair_locks"
+
+    user_id = Column(String(64), primary_key=True)
+    pair_id = Column(String(64), nullable=False, index=True)
+    created_at = Column(String(64), nullable=False)
+
+
 class Book(Base):
     __tablename__ = "books"
 
@@ -49,6 +58,14 @@ class Book(Base):
     created_by = Column(String(64), nullable=False)
     created_at = Column(String(64), nullable=False)
     finished_at = Column(String(64), nullable=True)
+
+
+class ActiveBookLock(Base):
+    __tablename__ = "active_book_locks"
+
+    pair_id = Column(String(64), primary_key=True)
+    book_id = Column(String(64), nullable=False, index=True)
+    created_at = Column(String(64), nullable=False)
 
 
 class CatalogBook(Base):
@@ -138,4 +155,19 @@ class ReminderConfig(Base):
     remind_time = Column(String(8), nullable=False, default="21:00")
     timezone = Column(String(64), nullable=False, default="Asia/Shanghai")
     updated_at = Column(String(64), nullable=False)
+
+
+class ReminderDeliveryLog(Base):
+    __tablename__ = "reminder_delivery_logs"
+    __table_args__ = (
+        UniqueConstraint("user_id", "delivery_date", name="uq_reminder_delivery_daily"),
+        Index("idx_reminder_delivery_user_created", "user_id", "created_at"),
+    )
+
+    delivery_id = Column(String(64), primary_key=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    delivery_date = Column(String(16), nullable=False)
+    status = Column(String(32), nullable=False)
+    error_message = Column(Text, nullable=False, default="")
+    created_at = Column(String(64), nullable=False)
 

@@ -24,6 +24,14 @@ class Settings:
 
     SQLITE_DB_PATH: str = os.getenv("SQLITE_DB_PATH", "data/app.db")
 
+    WECHAT_APP_ID: str = os.getenv("WECHAT_APP_ID", "")
+    WECHAT_APP_SECRET: str = os.getenv("WECHAT_APP_SECRET", "")
+    WECHAT_REMINDER_TEMPLATE_ID: str = os.getenv("WECHAT_REMINDER_TEMPLATE_ID", "")
+    ENABLE_TEST_USERS: bool = os.getenv(
+        "ENABLE_TEST_USERS",
+        "1" if os.getenv("DB_BACKEND", "mysql").strip().lower() == "sqlite" else "0",
+    ).strip().lower() in {"1", "true", "yes", "on"}
+
     @property
     def mysql_url(self) -> str:
         # 使用 PyMySQL 驱动连接 MySQL。

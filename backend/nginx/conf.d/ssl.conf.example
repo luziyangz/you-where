@@ -1,0 +1,40 @@
+# 未备案域名在大陆服务器上通常不能作为生产访问入口；本文件默认不会被 Nginx 加载。
+# 如果后续域名完成备案并已在微信后台配置 request 合法域名，可将本文件复制为 ssl.conf 后启用。
+#
+# 证书放置位置：
+#   backend/nginx/certs/www.nizaina.com.pem
+#   backend/nginx/certs/www.nizaina.com.key
+#
+# 重要限制：
+# - 证书签给 www.nizaina.com，不能用于 https://47.99.240.126 这类 IP 访问，否则客户端会报证书域名不匹配。
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name www.nizaina.com;
+
+    ssl_certificate /etc/nginx/certs/www.nizaina.com.pem;
+    ssl_certificate_key /etc/nginx/certs/www.nizaina.com.key;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location = /health {
+        proxy_pass http://you_where_backend/health;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location /api/v2/ {
+        proxy_pass http://you_where_backend/api/v2/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}

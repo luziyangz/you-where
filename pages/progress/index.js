@@ -1,5 +1,6 @@
-const { createEntry, fetchBookEntries, fetchCurrentBook, markBookEntriesRead, replyEntry } = require('../../services/api');
+const { createEntry, fetchBookEntries, fetchHome, markBookEntriesRead, replyEntry } = require('../../services/api');
 const { COPY, formatApiError } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
 
 const app = getApp();
 
@@ -34,7 +35,14 @@ Page({
   // 弹窗内容区域阻止事件冒泡（WXML 的 catchtap 需要绑定方法名）
   noop() {},
 
+  onLoad(query) {
+    this.shouldOpenComposer = !!(query && query.open_composer === '1');
+  },
+
   onShow() {
+    if (!requireLogin({ message: '请先登录后查看进度' })) {
+      return;
+    }
     this.loadPageData();
   },
 
@@ -50,28 +58,31 @@ Page({
       return;
     }
 
-    // 从全局数据同步 user 和 partner 头像信息
-    const globalUser    = app.globalData.user    || {};
-    const globalPair    = app.globalData.pair    || null;
-    const globalPartner = globalPair ? (globalPair.partner || {}) : {};
-
-    this.setData({
-      user:    { nickname: globalUser.nickname    || '', avatar: globalUser.avatar    || '' },
-      partner: { nickname: globalPartner.nickname || '', avatar: globalPartner.avatar || '' }
-    });
-
     this.setData({ loading: true });
     try {
-      const currentBookRes = await fetchCurrentBook();
-      const rawBook = currentBookRes.book || null;
+      const homeData = await fetchHome();
+      const pair = homeData.pair || null;
+      const currentUser = homeData.user || null;
+      const rawBook = homeData.current_book || null;
+
+      app.syncReadingContext({
+        user: currentUser,
+        pair,
+        currentBook: rawBook
+      }, { persistUser: true });
+
+      const partner = pair ? (pair.partner || {}) : {};
       const book = this.decorateBook(rawBook);
       if (!book) {
+        app.syncCurrentBook(null);
         this.setData({
           book: null,
           entries: [],
           unreadCount: 0,
           entryPage: 1,
-          entryHasMore: false
+          entryHasMore: false,
+          user: { nickname: currentUser && currentUser.nickname || '', avatar: currentUser && currentUser.avatar || '' },
+          partner: { nickname: partner.nickname || '', avatar: partner.avatar || '' }
         });
         return;
       }
@@ -96,11 +107,17 @@ Page({
         unreadCount: entriesRes.unread_count || 0,
         locateQueue: unreadQueue,
         entryPage: 1,
-        entryHasMore: !!(entriesRes.pagination && entriesRes.pagination.has_more)
+        entryHasMore: !!(entriesRes.pagination && entriesRes.pagination.has_more),
+        user: { nickname: currentUser && currentUser.nickname || '', avatar: currentUser && currentUser.avatar || '' },
+        partner: { nickname: partner.nickname || '', avatar: partner.avatar || '' }
       });
       // 联调阶段严格要求后端接口可用，进入页面即同步已读状态
       await this.syncEntriesRead(book.book_id, normalizedEntries);
-      app.globalData.currentBook = book;
+      app.syncCurrentBook(book);
+      if (this.shouldOpenComposer) {
+        this.shouldOpenComposer = false;
+        this.onOpenComposer();
+      }
     } catch (error) {
       if (error.code === 401) {
         app.logout();
@@ -179,6 +196,10 @@ Page({
         mark_finished: false
       }
     });
+  },
+
+  onCenterBtnClick() {
+    this.onOpenComposer();
   },
 
   onCloseComposer() {

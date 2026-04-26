@@ -1,7 +1,11 @@
-const { bindPair, fetchCurrentPair, unbindPair } = require('../../services/api');
+const { bindPair, fetchCurrentPair, fetchMe, unbindPair } = require('../../services/api');
 const { COPY, formatApiError, mapBindErrorMessage } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
+const { createQrMatrix } = require('../../utils/qrcode');
 
 const app = getApp();
+const QR_CANVAS_SIZE = 128;
+const QR_EXPORT_SIZE = 512;
 
 Page({
   data: {
@@ -34,19 +38,25 @@ Page({
 
     // 我的绑定二维码
     myBindQrText: '',
-    myBindQrUrl: ''
-  },
-
-  onLoad() {
-    this.loadPairData();
+    myBindQrReady: false,
+    myBindQrTempPath: ''
   },
 
   onShow() {
+    if (!requireLogin({ message: '请先登录后再结伴' })) {
+      return;
+    }
+    this.loadPairData();
+    this.updateNavigationState();
+  },
+
+  updateNavigationState() {
     // 同步 tabBar 激活状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected:   0,
-        hasPartner: this.data.hasPartner
+        hasPartner: this.data.hasPartner,
+        hasBook: !!app.globalData.currentBook
       });
     }
     wx.setNavigationBarTitle({
@@ -57,18 +67,41 @@ Page({
   // 从全局或后端拉取共读关系数据
   async loadPairData() {
     if (!app.globalData.token) {
-      this.setData({ hasPartner: false });
+      this.setData({
+        hasPartner: false,
+        inviteCode: '',
+        myNickname: '',
+        myAvatar: '',
+        myJoinCode: '',
+        partnerNickname: '',
+        partnerAvatar: '',
+        bindDays: 0,
+        sharedBooks: 0,
+        sharedNotes: 0,
+        myBindQrText: '',
+        myBindQrReady: false,
+        myBindQrTempPath: ''
+      });
+      app.syncReadingContext({
+        pair: null,
+        currentBook: null
+      });
       return;
     }
 
     this.setData({ loading: true });
     try {
-      const res  = await fetchCurrentPair();
+      const [res, me] = await Promise.all([fetchCurrentPair(), fetchMe()]);
       const pair = res.pair || null;
-      const user = app.globalData.user || {};
+      const user = me || app.globalData.user || {};
+      app.syncReadingContext({
+        user,
+        pair
+      }, { persistUser: true });
 
       if (pair && pair.partner) {
         const myJoinCode = user.join_code || '';
+        const qrData = this.buildMyQrData(myJoinCode);
         this.setData({
           hasPartner:      true,
           myNickname:      user.nickname  || '',
@@ -79,20 +112,20 @@ Page({
           bindDays:        pair.bind_days         || 1,
           sharedBooks:     pair.shared_books      || 0,
           sharedNotes:     pair.shared_notes      || 0,
-          ...this.buildMyQrData(myJoinCode)
+          ...qrData
         });
-        // 同步到全局
-        app.globalData.pair = pair;
+        this.scheduleDrawMyQrCode(qrData.myBindQrText);
       } else {
         const myJoinCode = user.join_code || '';
+        const qrData = this.buildMyQrData(myJoinCode);
         this.setData({
           hasPartner:  false,
           myNickname:  user.nickname  || '',
           myAvatar:    user.avatar    || '',
           myJoinCode,
-          ...this.buildMyQrData(myJoinCode)
+          ...qrData
         });
-        app.globalData.pair = null;
+        this.scheduleDrawMyQrCode(qrData.myBindQrText);
       }
     } catch (error) {
       if (error.code === 401) {
@@ -101,8 +134,7 @@ Page({
       wx.showToast({ title: formatApiError(error, '加载伙伴关系失败'), icon: 'none' });
     } finally {
       this.setData({ loading: false });
-      // 拉取数据后刷新导航标题和 tabBar
-      this.onShow();
+      this.updateNavigationState();
     }
   },
 
@@ -111,16 +143,67 @@ Page({
     if (!code) {
       return {
         myBindQrText: '',
-        myBindQrUrl: ''
+        myBindQrReady: false,
+        myBindQrTempPath: ''
       };
     }
     // 统一二维码内容协议，便于后续多端互通。
     const qrText = `youzainaye://pair/bind?join_code=${code}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(qrText)}`;
     return {
       myBindQrText: qrText,
-      myBindQrUrl: qrUrl
+      myBindQrReady: false,
+      myBindQrTempPath: ''
     };
+  },
+
+  scheduleDrawMyQrCode(qrText) {
+    if (!qrText) {
+      return;
+    }
+    const draw = () => this.drawMyQrCode(qrText);
+    if (typeof wx.nextTick === 'function') {
+      wx.nextTick(draw);
+      return;
+    }
+    setTimeout(draw, 0);
+  },
+
+  drawMyQrCode(qrText) {
+    let matrix;
+    try {
+      matrix = createQrMatrix(qrText);
+    } catch (error) {
+      wx.showToast({ title: '二维码生成失败', icon: 'none' });
+      return;
+    }
+
+    const canvasSize = QR_CANVAS_SIZE;
+    const quietZone = 4;
+    const moduleCount = matrix.length + quietZone * 2;
+    const moduleSize = Math.floor(canvasSize / moduleCount);
+    const qrSize = moduleCount * moduleSize;
+    const offset = Math.floor((canvasSize - qrSize) / 2);
+    const ctx = wx.createCanvasContext('myBindQrCanvas', this);
+
+    ctx.setFillStyle('#ffffff');
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
+    ctx.setFillStyle('#111827');
+    matrix.forEach((row, y) => {
+      row.forEach((dark, x) => {
+        if (!dark) {
+          return;
+        }
+        ctx.fillRect(
+          offset + (x + quietZone) * moduleSize,
+          offset + (y + quietZone) * moduleSize,
+          moduleSize,
+          moduleSize
+        );
+      });
+    });
+    ctx.draw(false, () => {
+      this.setData({ myBindQrReady: true, myBindQrTempPath: '' });
+    });
   },
 
   onInputInviteCode(e) {
@@ -160,7 +243,7 @@ Page({
         sharedNotes:     this.data.sharedNotes || 0
       });
       wx.showToast({ title: '绑定成功', icon: 'success' });
-      this.onShow();
+      this.updateNavigationState();
     } catch (error) {
       wx.showToast({ title: mapBindErrorMessage(error), icon: 'none' });
     } finally {
@@ -232,15 +315,63 @@ Page({
   },
 
   onPreviewMyQr() {
-    const url = (this.data.myBindQrUrl || '').trim();
-    if (!url) {
+    if (!this.data.myBindQrReady) {
       wx.showToast({ title: '二维码生成中，请稍后', icon: 'none' });
       return;
     }
-    wx.previewImage({
-      urls: [url],
-      current: url
-    });
+    if (this.data.myBindQrTempPath) {
+      wx.previewImage({
+        urls: [this.data.myBindQrTempPath],
+        current: this.data.myBindQrTempPath
+      });
+      return;
+    }
+    wx.canvasToTempFilePath({
+      canvasId: 'myBindQrCanvas',
+      x: 0,
+      y: 0,
+      width: QR_CANVAS_SIZE,
+      height: QR_CANVAS_SIZE,
+      destWidth: QR_EXPORT_SIZE,
+      destHeight: QR_EXPORT_SIZE,
+      success: (res) => {
+        const path = res.tempFilePath;
+        this.setData({ myBindQrTempPath: path });
+        wx.previewImage({
+          urls: [path],
+          current: path
+        });
+      },
+      fail: () => {
+        wx.showToast({ title: '二维码预览失败', icon: 'none' });
+      }
+    }, this);
+  },
+
+  onSaveMyQr() {
+    if (!this.data.myBindQrReady) {
+      wx.showToast({ title: '二维码生成中，请稍后', icon: 'none' });
+      return;
+    }
+    wx.canvasToTempFilePath({
+      canvasId: 'myBindQrCanvas',
+      x: 0,
+      y: 0,
+      width: QR_CANVAS_SIZE,
+      height: QR_CANVAS_SIZE,
+      destWidth: QR_EXPORT_SIZE,
+      destHeight: QR_EXPORT_SIZE,
+      success: (res) => {
+        wx.saveImageToPhotosAlbum({
+          filePath: res.tempFilePath,
+          success: () => wx.showToast({ title: '二维码已保存', icon: 'success' }),
+          fail: () => wx.showToast({ title: '保存失败，请检查相册权限', icon: 'none' })
+        });
+      },
+      fail: () => {
+        wx.showToast({ title: '二维码保存失败', icon: 'none' });
+      }
+    }, this);
   },
 
   // 一键复制自己的共读码，方便分享给对方绑定
@@ -272,8 +403,10 @@ Page({
         this.setData({ unbindLoading: true });
         try {
           await unbindPair();
-          app.globalData.pair        = null;
-          app.globalData.currentBook = null;
+          app.syncReadingContext({
+            pair: null,
+            currentBook: null
+          });
           this.setData({
             hasPartner:      false,
             inviteCode:      '',
@@ -284,7 +417,7 @@ Page({
             sharedNotes:     0
           });
           wx.showToast({ title: '已解除绑定', icon: 'success' });
-          this.onShow();
+          this.updateNavigationState();
         } catch (error) {
           wx.showToast({ title: formatApiError(error, '解绑失败'), icon: 'none' });
         } finally {

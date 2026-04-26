@@ -7,7 +7,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from common.db import SessionLocal
-from api.v2.store_reading import seed_default_store_books
+from service.store_service import seed_default_store_books
 
 
 def main() -> None:

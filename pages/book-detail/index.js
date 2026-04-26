@@ -1,5 +1,6 @@
-const { createBook, storeGetBook } = require('../../services/api');
+const { createBook, fetchHome, storeGetBook } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
 
 const app = getApp();
 
@@ -8,7 +9,9 @@ Page({
     catalogId: '',
     loading: false,
     adding: false,
-    book: null
+    book: null,
+    hasPartner: false,
+    hasCurrentBook: false
   },
 
   onLoad(query) {
@@ -17,7 +20,40 @@ Page({
   },
 
   onShow() {
+    if (!requireLogin({ message: '请先登录后查看书籍详情' })) {
+      return;
+    }
+    this.syncHomeContext();
     this.loadBook();
+  },
+
+  async syncHomeContext() {
+    if (!app.globalData.token) {
+      this.setData({
+        hasPartner: false,
+        hasCurrentBook: false
+      });
+      return null;
+    }
+
+    try {
+      const payload = await fetchHome();
+      app.syncReadingContext({
+        user: payload.user,
+        pair: payload.pair,
+        currentBook: payload.current_book || null
+      }, { persistUser: true });
+      this.setData({
+        hasPartner: !!payload.pair,
+        hasCurrentBook: !!payload.current_book
+      });
+      return payload;
+    } catch (error) {
+      if (error.code === 401) {
+        app.logout();
+      }
+      return null;
+    }
   },
 
   async loadBook() {
@@ -57,6 +93,21 @@ Page({
       wx.showToast({ title: '请先登录', icon: 'none' });
       return;
     }
+    await this.syncHomeContext();
+    if (!this.data.hasPartner) {
+      wx.showToast({ title: '请先去伙伴页绑定共读伙伴', icon: 'none' });
+      wx.switchTab({
+        url: '/pages/partner/index'
+      });
+      return;
+    }
+    if (this.data.hasCurrentBook) {
+      wx.showToast({ title: '当前已有正在共读的书', icon: 'none' });
+      wx.navigateTo({
+        url: '/pages/progress/index'
+      });
+      return;
+    }
     const catalogId = this.data.catalogId;
     if (!catalogId) {
       return;
@@ -65,6 +116,7 @@ Page({
     this.setData({ adding: true });
     try {
       await createBook({ catalog_id: catalogId });
+      await this.syncHomeContext();
       wx.showToast({ title: '已加入共读', icon: 'success' });
       wx.switchTab({
         url: '/pages/home/index'

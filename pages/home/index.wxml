@@ -7,7 +7,10 @@
       </view>
       <view class="empty-title">欢迎开启共读之旅</view>
       <view class="empty-desc">登录后即可生成你的共读码，与 TA 开始同步阅读</view>
-      <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+      <view class="auth-actions">
+        <button class="btn-primary w-full" loading="{{loginLoading}}" bindtap="onTapLogin">微信一键登录</button>
+        <button class="btn-secondary w-full" open-type="getPhoneNumber" loading="{{phoneLoginLoading}}" bindgetphonenumber="onPhoneLogin">手机号登录</button>
+      </view>
     </view>
   </block>
 
@@ -42,7 +45,7 @@
             <view class="nickname">{{partner.nickname || '伙伴'}}</view>
           </view>
         </view>
-        <view class="unbind-btn" bindtap="onTapManagePair">解绑伙伴</view>
+        <view class="unbind-btn" bindtap="onGoManagePartner">去伙伴页管理</view>
       </view>
 
       <!-- 空书架引导 -->
@@ -111,35 +114,25 @@
         </view>
       </view>
 
-      <!-- 共读笔记区域 -->
       <view class="notes-section">
         <view class="notes-header">
           <view class="notes-title-group">
-            <text class="notes-title">共读笔记</text>
-            <text class="notes-count">({{currentBook.notes_count || 0}})</text>
-          </view>
-          <view class="write-note-btn" catchtap="onTapWriteNote">
-            <view class="icon-edit"></view>
-            <text>写笔记</text>
+            <text class="notes-title">接下来做什么</text>
           </view>
         </view>
-        
+
         <view class="notes-list">
-          <view class="empty-notes-tip" wx:if="{{!currentBook.latest_notes.length}}">
-            还没有笔记，快去记录第一条想法吧
-          </view>
-          <block wx:else>
-            <view class="note-card" wx:for="{{currentBook.latest_notes}}" wx:key="id">
-              <view class="note-card-header">
-                <view class="note-user-info">
-                  <image class="note-avatar-small" src="{{item.user_avatar}}" mode="aspectFill"></image>
-                  <text class="note-user-name">{{item.user_nickname}}</text>
-                </view>
-                <view class="note-page-tag {{item.is_me ? 'me-tag' : 'partner-tag'}}">第{{item.page_no}}页</view>
+          <view class="note-card">
+            <view class="note-card-header">
+              <view class="note-user-info">
+                <text class="note-user-name">进度与笔记已收敛到进度页</text>
               </view>
-              <view class="note-content-text">{{item.content}}</view>
             </view>
-          </block>
+            <view class="note-content-text">在进度页查看完整动态、定位未读、回复伙伴，并继续记录页码和想法。</view>
+          </view>
+
+          <button class="btn-primary w-full" bindtap="onGotoProgress">查看共读进度</button>
+          <button class="btn-secondary w-full" bindtap="onGoManagePartner">去伙伴页管理</button>
         </view>
       </view>
     </view>
@@ -168,33 +161,4 @@
     </view>
   </view>
 
-  <!-- 记一笔弹窗 -->
-  <view class="modal-overlay" wx:if="{{showNotePopup}}" bindtap="onCloseNotePopup">
-    <view class="modal-content" catchtap="noop">
-      <view class="modal-header-line"></view>
-      <view class="modal-padding">
-        <view class="modal-header">
-          <text class="modal-title">更新你的进度</text>
-          <view class="close-icon" bindtap="onCloseNotePopup">×</view>
-        </view>
-        <view class="note-subtitle">伙伴已读到 <text class="partner-text">{{currentBook.partner_progress || 0}}</text> 页</view>
-        
-        <view class="form-group">
-          <view class="page-input-box">
-            <input class="page-input" type="number" placeholder="{{currentBook.my_progress || 0}}" value="{{noteForm.page}}" bindinput="onNotePageInput" />
-            <text class="page-total">/ {{currentBook.total_pages}}</text>
-          </view>
-          <textarea class="note-textarea" placeholder="在这里记录此刻的想法..." value="{{noteForm.content}}" bindinput="onNoteContentInput"></textarea>
-          <view class="warning-box" wx:if="{{noteForm.page > currentBook.partner_progress}}">
-            <view class="icon-alert"></view>
-            <text class="warning-text">你已超过伙伴进度，笔记将被锁定。</text>
-          </view>
-        </view>
-
-        <button class="btn-primary modal-submit" loading="{{noteSubmitting}}" bindtap="onSubmitNote">
-          同步给伙伴
-        </button>
-      </view>
-    </view>
-  </view>
 </view>

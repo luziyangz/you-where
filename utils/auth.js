@@ -15,35 +15,73 @@ const getOrCreateDebugOpenId = () => {
   return debugOpenId;
 };
 
-const login = () => {
+const shouldUseDebugIdentity = () => {
+  try {
+    const systemInfo = wx.getSystemInfoSync && wx.getSystemInfoSync();
+    if (systemInfo && systemInfo.platform === 'devtools') {
+      return true;
+    }
+  } catch (error) {
+    // ignore
+  }
+
+  try {
+    const app = getApp && getApp();
+    const baseUrl = app && app.globalData && app.globalData.apiBaseUrl || '';
+    return /https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(baseUrl);
+  } catch (error) {
+    return false;
+  }
+};
+
+const buildLoginPayload = (code, extra = {}) => ({
+  code,
+  ...extra,
+  ...(shouldUseDebugIdentity() ? { debug_open_id: getOrCreateDebugOpenId() } : {})
+});
+
+const wxLogin = () => {
   return new Promise((resolve, reject) => {
     wx.login({
-      success: async (res) => {
+      success: (res) => {
         if (!res.code) {
           reject(new Error('微信登录失败，请稍后重试'));
           return;
         }
-
-        try {
-          const data = await request({
-            url: '/auth/login',
-            method: 'POST',
-            data: {
-              code: res.code,
-              debug_open_id: getOrCreateDebugOpenId()
-            }
-          });
-
-          wx.setStorageSync(STORAGE_KEYS.token, data.token);
-          wx.setStorageSync(STORAGE_KEYS.user, data.user);
-          resolve(data);
-        } catch (error) {
-          reject(error);
-        }
+        resolve(res.code);
       },
       fail: reject
     });
   });
+};
+
+const persistSession = (data) => {
+  wx.setStorageSync(STORAGE_KEYS.token, data.token);
+  wx.setStorageSync(STORAGE_KEYS.user, data.user);
+  return data;
+};
+
+const login = async () => {
+  const code = await wxLogin();
+  const data = await request({
+    url: '/auth/login',
+    method: 'POST',
+    data: buildLoginPayload(code)
+  });
+  return persistSession(data);
+};
+
+const phoneLogin = async ({ phoneCode, debugPhoneNumber } = {}) => {
+  const code = await wxLogin();
+  const data = await request({
+    url: '/auth/phone-login',
+    method: 'POST',
+    data: buildLoginPayload(code, {
+      phone_code: phoneCode || '',
+      debug_phone_number: debugPhoneNumber || ''
+    })
+  });
+  return persistSession(data);
 };
 
 const clearSession = () => {
@@ -60,6 +98,7 @@ const restoreSession = () => {
 
 module.exports = {
   login,
+  phoneLogin,
   clearSession,
   restoreSession
 };

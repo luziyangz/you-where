@@ -1,11 +1,22 @@
 const { storeSearchBooks } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
 
-const app = getApp();
+const DEFAULT_CATEGORIES = [
+  { key: 'all', name: '全部' },
+  { key: 'foreign_classics', name: '国外名著' },
+  { key: 'history', name: '历史' },
+  { key: 'xin_xue', name: '心学' },
+  { key: 'mysticism', name: '玄学术数' },
+  { key: 'medicine', name: '中医经络' },
+  { key: 'classics', name: '国学经典' }
+];
 
 Page({
   data: {
     keyword: '',
+    selectedCategory: 'all',
+    categories: DEFAULT_CATEGORIES,
     loading: false,
     books: [],
     page: 1,
@@ -13,32 +24,26 @@ Page({
   },
 
   onShow() {
+    if (!requireLogin({ message: '请先登录后使用书城' })) {
+      this.setData({ books: [], page: 1, hasMore: true, loading: false });
+      return;
+    }
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
         selected: 2
       });
     }
-    // 进入书城默认加载热门公版书（不要求登录）
-    this.setData({ books: [], page: 1, hasMore: true }, () => {
-      this.loadPopular(true);
-    });
+    this.loadBooks(true);
   },
 
   onPullDownRefresh() {
-    const keyword = (this.data.keyword || '').trim();
-    const task = keyword ? this.searchBooks(true) : this.loadPopular(true);
-    Promise.resolve(task).finally(() => {
+    Promise.resolve(this.loadBooks(true)).finally(() => {
       wx.stopPullDownRefresh();
     });
   },
 
   onReachBottom() {
-    const keyword = (this.data.keyword || '').trim();
-    if (keyword) {
-      this.searchBooks(false);
-      return;
-    }
-    this.loadPopular(false);
+    this.loadBooks(false);
   },
 
   onKeywordInput(e) {
@@ -48,69 +53,43 @@ Page({
   },
 
   onSearchConfirm() {
-    this.searchBooks(true);
+    this.loadBooks(true);
   },
 
-  async loadPopular(reset = false) {
+  onCategoryTap(e) {
+    const key = e.currentTarget.dataset.key || 'all';
+    if (key === this.data.selectedCategory) {
+      return;
+    }
+    this.setData({
+      selectedCategory: key,
+      books: [],
+      page: 1,
+      hasMore: true
+    }, () => {
+      this.loadBooks(true);
+    });
+  },
+
+  async loadBooks(reset = false) {
     if (!reset && !this.data.hasMore) {
       return;
     }
     const nextPage = reset ? 1 : Number(this.data.page || 1);
-    this.setData({ loading: true });
-    try {
-      // query 为空时后端返回热门/最近缓存
-      const payload = await storeSearchBooks('', nextPage);
-      const newBooks = payload.books || [];
-      const merged = reset ? newBooks : [...(this.data.books || []), ...newBooks];
-      this.setData({
-        books: merged,
-        page: nextPage + 1,
-        hasMore: newBooks.length >= 20
-      });
-      if (reset && Number(payload.network_synced_count || 0) > 0) {
-        wx.showToast({
-          title: `已从网络更新 ${payload.network_synced_count} 本`,
-          icon: 'none'
-        });
-      }
-    } catch (error) {
-      wx.showToast({
-        title: formatApiError(error, '加载书籍失败'),
-        icon: 'none'
-      });
-    } finally {
-      this.setData({ loading: false });
-    }
-  },
-
-  async searchBooks(reset = false) {
     const query = (this.data.keyword || '').trim();
-    if (!query) {
-      wx.showToast({ title: '请输入书名或作者', icon: 'none' });
-      return;
-    }
+    const category = this.data.selectedCategory || 'all';
 
-    if (!reset && !this.data.hasMore) {
-      return;
-    }
-
-    const nextPage = reset ? 1 : Number(this.data.page || 1);
     this.setData({ loading: true });
     try {
-      const payload = await storeSearchBooks(query, nextPage);
+      const payload = await storeSearchBooks(query, nextPage, category);
       const newBooks = payload.books || [];
       const merged = reset ? newBooks : [...(this.data.books || []), ...newBooks];
       this.setData({
         books: merged,
+        categories: payload.categories && payload.categories.length ? payload.categories : DEFAULT_CATEGORIES,
         page: nextPage + 1,
-        hasMore: newBooks.length >= 20
+        hasMore: Object.prototype.hasOwnProperty.call(payload, 'has_more') ? !!payload.has_more : newBooks.length >= 20
       });
-      if (reset && Number(payload.network_synced_count || 0) > 0) {
-        wx.showToast({
-          title: `已从网络更新 ${payload.network_synced_count} 本`,
-          icon: 'none'
-        });
-      }
     } catch (error) {
       wx.showToast({
         title: formatApiError(error, '加载书籍失败'),

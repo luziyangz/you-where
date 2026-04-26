@@ -50,6 +50,23 @@
   line-height: 1.6;
 }
 
+.auth-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: #07c160;
+  border: 2rpx solid rgba(7, 193, 96, 0.35);
+}
+
+.btn-secondary::after {
+  border: none;
+}
+
 /* 个人信息卡 */
 .user-card {
   background: #FFFFFF;
@@ -254,6 +271,60 @@
 .stat-label {
   font-size: 24rpx;
   color: #999999;
+}
+
+.goal-card {
+  background: #FFFFFF;
+  border-radius: 32rpx;
+  padding: 32rpx;
+  margin-bottom: 40rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.02);
+}
+
+.goal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 26rpx;
+}
+
+.goal-title {
+  font-size: 30rpx;
+  color: #1A1A1A;
+  font-weight: 700;
+}
+
+.goal-link {
+  font-size: 24rpx;
+  color: #07C160;
+  padding: 8rpx 0 8rpx 24rpx;
+}
+
+.goal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #666666;
+  font-size: 24rpx;
+  margin-bottom: 14rpx;
+}
+
+.goal-track {
+  height: 14rpx;
+  border-radius: 999rpx;
+  background: #F1F3F5;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+
+.goal-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #07C160, #45D483);
+}
+
+.goal-fill.day {
+  background: linear-gradient(90deg, #FF9F4A, #FFD166);
 }
 
 /* 设置列表 */

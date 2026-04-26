@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .env
+.env.*
 .venv
 venv/
 ENV/
@@ -16,7 +17,9 @@ data/
 archive/
 tests/
 test_*.py
+.pytest_cache/
 deploy_guide.md
-start.bat
-Dockerfile
-docker-compose.yml
+.deploy/
+nginx/certs/*
+!nginx/certs/.gitkeep
+nginx/logs/

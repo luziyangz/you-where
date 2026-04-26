@@ -1,5 +1,6 @@
 const { fetchReadingHistory } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
+const { requireLogin } = require('../../utils/auth-gate');
 
 Page({
   data: {
@@ -11,6 +12,9 @@ Page({
   },
 
   onShow() {
+    if (!requireLogin({ message: '请先登录后查看历史' })) {
+      return;
+    }
     this.loadHistory(true);
   },
 
