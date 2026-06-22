@@ -90,8 +90,8 @@
         <view class="switch-desc">{{pairRequestSub}}</view>
       </view>
 
-      <button class="btn-primary w-full" bindtap="onGoToPartner">管理共读关系</button>
-      <button class="btn-plain w-full" bindtap="onPreviewManualRecord">查看记录方式</button>
+      <button class="btn-primary w-full" bindtap="onTapAddBook">添加一本书</button>
+      <button class="btn-plain w-full" bindtap="onGoToPartner">管理共读关系</button>
     </view>
   </block>
 
@@ -270,7 +270,7 @@
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">
-          <text class="modal-title">添加共读书</text>
+          <text class="modal-title">添加书籍</text>
           <view class="close-icon" bindtap="onCloseBookPopup">×</view>
         </view>
 
@@ -280,7 +280,7 @@
           <input class="form-input" type="number" data-field="total_pages" placeholder="总页数" value="{{bookForm.total_pages}}" bindinput="onBookFieldInput" />
         </view>
 
-        <button class="btn-primary modal-submit" loading="{{bookSubmitting}}" bindtap="onSubmitBook">开始共读</button>
+        <button class="btn-primary modal-submit" loading="{{bookSubmitting}}" bindtap="onSubmitBook">保存到记录</button>
       </view>
     </view>
   </view>
