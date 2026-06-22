@@ -38,7 +38,7 @@
           loading="{{loginLoading}}"
           disabled="{{!canProceedLogin || loginLoading}}"
           bindtap="onTapLogin"
-        >保存进度前登录</button>
+        >开始使用共读记录</button>
         <button
           wx:if="{{showReviewLogin}}"
           class="btn-review-login w-full"

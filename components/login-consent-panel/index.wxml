@@ -1,8 +1,8 @@
-<!-- 登录前合规：微信隐私授权 + 用户协议与隐私政策确认 -->
+<!-- 登录前确认：隐私指引 + 用户协议与隐私政策 -->
 <view class="consent-panel">
   <view wx:if="{{needWxPrivacy}}" class="wx-privacy-card">
     <view class="wx-privacy-title">隐私保护提示</view>
-    <view class="wx-privacy-desc">根据微信平台要求，使用登录等功能前需同意 {{privacyContractName}}。</view>
+    <view class="wx-privacy-desc">继续使用登录功能前，请先阅读并同意 {{privacyContractName}}。</view>
     <button class="btn-privacy-contract" plain bindtap="onOpenWxPrivacyContract">查看完整隐私指引</button>
     <button
       wx:if="{{supportAgreeBtn}}"

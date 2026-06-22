@@ -1,4 +1,4 @@
-// 登录前合规：微信平台隐私授权 + 用户协议勾选
+// 登录前确认：隐私指引 + 用户协议勾选
 Component({
   data: {
     agreedTerms: false,
