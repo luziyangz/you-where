@@ -1,4 +1,4 @@
-<view class="home-page {{(!isLogin || !hasPartner) ? 'is-centered' : ''}}">
+<view class="home-page {{(!isLogin || (!hasPartner && !currentBook)) ? 'is-centered' : ''}}">
   <view class="home-bg">
     <view class="grain-dot dot-a"></view>
     <view class="grain-dot dot-b"></view>
@@ -45,7 +45,7 @@
     </view>
   </block>
 
-  <block wx:elif="{{isLogin && !hasPartner}}">
+  <block wx:elif="{{isLogin && !hasPartner && !currentBook}}">
     <view class="state-wrap bind-state">
       <view class="eyebrow">寻找伙伴</view>
       <view class="hero-title">寻找你的共读伙伴</view>
@@ -95,7 +95,7 @@
     </view>
   </block>
 
-  <block wx:elif="{{hasPartner && !currentBook}}">
+  <block wx:elif="{{!currentBook}}">
     <view class="content-wrap">
       <view class="section-hero">
         <view>
@@ -205,7 +205,7 @@
 
       <view class="section-hero">
         <view class="section-hero-text tap-open-book" hover-class="tap-open-book--active" bindtap="onOpenCurrentBook">
-          <view class="eyebrow">正在共读</view>
+          <view class="eyebrow">{{hasPartner ? '正在共读' : '正在阅读'}}</view>
           <view class="page-title">{{currentBook.title}}</view>
           <view class="page-subtitle">{{currentBook.author || '作者未填写'}}</view>
         </view>
@@ -223,11 +223,11 @@
             </view>
             <text class="duo-mini-name">{{user.nickname || '我'}}</text>
           </view>
-          <view class="duo-bridge">
+          <view class="duo-bridge" wx:if="{{hasPartner}}">
             <view class="duo-bridge-line"></view>
             <text class="duo-bridge-text">同读</text>
           </view>
-          <view class="duo-mini">
+          <view class="duo-mini" wx:if="{{hasPartner}}">
             <view class="avatar-mini partner">
               <block wx:if="{{partner.avatar}}">
                 <image src="{{partner.avatar}}" mode="aspectFill"></image>
@@ -241,11 +241,11 @@
           <view class="book-cover">
             <view class="cover-title">{{currentBook.title}}</view>
             <view class="cover-line"></view>
-            <view class="cover-author">{{currentBook.author || '共读书目'}}</view>
+            <view class="cover-author">{{currentBook.author || '阅读书目'}}</view>
           </view>
           <view class="today-copy">
-            <view class="reading-label">今日共读 · 第 {{currentBook.reading_days || 1}} 天</view>
-            <view class="reading-main">{{currentBook.relationshipTip}}</view>
+            <view class="reading-label">{{hasPartner ? '今日共读' : '今日阅读'}} · 第 {{currentBook.reading_days || 1}} 天</view>
+            <view class="reading-main">{{hasPartner ? currentBook.relationshipTip : '记录今天读到哪里，慢慢把这本书读完。'}}</view>
             <view class="reading-note" wx:if="{{currentBook.total_pages > 0}}">{{currentBook.progressLine}}</view>
             <view class="reading-open-hint">轻触查看进度记录</view>
           </view>
@@ -255,9 +255,9 @@
       <view class="action-card">
         <view class="action-copy">
           <view class="action-title">接下来做什么</view>
-          <view class="action-desc">在进度页查看完整动态、回复伙伴，并继续记录页码和想法。</view>
+          <view class="action-desc">{{hasPartner ? '在进度页查看完整动态、回复伙伴，并继续记录页码和想法。' : '继续记录页码、读完状态和备注，也可以之后再绑定伙伴一起共读。'}}</view>
         </view>
-        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">查看共读进度</button>
+        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">{{hasPartner ? '查看共读进度' : '记录阅读进度'}}</button>
         <button class="btn-secondary w-full" bindtap="onGoToLibrary">去书库换一本</button>
         <view class="action-links">
           <text class="action-link" bindtap="onGoManagePartner">共读关系</text>

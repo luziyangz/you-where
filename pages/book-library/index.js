@@ -171,27 +171,12 @@ Page({
       });
       return;
     }
-    if (!app.globalData.pair) {
-      wx.showModal({
-        title: '先建立共读关系',
-        content: '这本书可以加入阅读记录。要同步给伙伴，需要先绑定一位共读伙伴。',
-        cancelText: '继续浏览',
-        confirmText: '去绑定',
-        success: (res) => {
-          if (res.confirm) {
-            wx.navigateTo({ url: '/pages/partner/index' });
-          }
-        }
-      });
-      return;
-    }
-
     const payload = {
       title: book.title,
       author: book.author === '作者未详' ? '' : book.author,
       total_pages: book.total_pages
     };
-    const addRequest = app.globalData.currentBook ? requestBookSwitch(payload) : createBook(payload);
+    const addRequest = app.globalData.pair && app.globalData.currentBook ? requestBookSwitch(payload) : createBook(payload);
     this.setData({ addingId: id });
     try {
       const result = await addRequest;

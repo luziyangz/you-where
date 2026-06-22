@@ -165,12 +165,14 @@ def lock_users(db: Session, user_ids: Iterable[str]) -> None:
 
 
 def list_pair_ids_for_user(db: Session, user_id: str) -> List[str]:
-    return db.execute(
+    pair_ids = db.execute(
         select(Pair.pair_id).where(
             Pair.status.in_(["active", "unbound"]),
             or_(Pair.user_a_id == user_id, Pair.user_b_id == user_id),
         )
     ).scalars().all()
+    personal_id = f"personal_{user_id}"[:64]
+    return list(pair_ids) + [personal_id]
 
 
 def count_books_for_pairs(db: Session, pair_ids: List[str], status: Optional[str] = None) -> int:

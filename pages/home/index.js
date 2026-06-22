@@ -375,23 +375,7 @@ Page({
       return;
     }
 
-    if (!this.data.hasPartner) {
-      wx.showModal({
-        title: '先建立共读关系',
-        content: '书名、作者和页数已经可以填写。要把它保存为可同步的阅读记录，需要先绑定一位共读伙伴。',
-        cancelText: '继续编辑',
-        confirmText: '去绑定',
-        success: (res) => {
-          if (res.confirm) {
-            this.onCloseBookPopup();
-            this.onGoToPartner();
-          }
-        }
-      });
-      return;
-    }
-
-    const needSwitchRequest = !!this.data.currentBook;
+    const needSwitchRequest = !!this.data.currentBook && this.data.hasPartner;
     const doCreate = async () => {
       const result = await createBook({
         title: title.trim(),
@@ -549,10 +533,6 @@ Page({
   onCenterBtnClick() {
     if (!this.data.isLogin) {
       wx.showToast({ title: '请先登录', icon: 'none' });
-      return;
-    }
-    if (!this.data.hasPartner) {
-      this.onGoToPartner();
       return;
     }
     if (!this.data.currentBook) {

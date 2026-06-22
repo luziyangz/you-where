@@ -39,6 +39,7 @@ from repo import store_repo
 READER_MODE_SET = frozenset({"paper", "night", "focus"})
 PAIR_REQUEST_EXPIRE_DAYS = 7
 TEST_DIRECT_BIND_JOIN_CODES = frozenset({"900001", "900002"})
+PERSONAL_PAIR_PREFIX = "personal_"
 
 
 def utc_now() -> str:
@@ -75,6 +76,29 @@ def partner_id(pair, user_id: str) -> str:
     return pair.user_b_id if pair.user_a_id == user_id else pair.user_a_id
 
 
+def personal_pair_id(user_id: str) -> str:
+    return f"{PERSONAL_PAIR_PREFIX}{user_id}"[:64]
+
+
+def is_personal_book(book: Book, user_id: str) -> bool:
+    return bool(book and book.pair_id == personal_pair_id(user_id) and book.created_by == user_id)
+
+
+def can_access_book(db: Session, book: Book, user_id: str):
+    if is_personal_book(book, user_id):
+        return None
+    pair = repo.get_active_pair(db, user_id)
+    if pair and pair.pair_id == book.pair_id:
+        return pair
+    return None
+
+
+def book_progress_for_viewer(db: Session, book: Book, user_id: str) -> Dict[str, Any]:
+    pair = repo.get_active_pair(db, user_id)
+    target_partner_id = partner_id(pair, user_id) if pair and pair.pair_id == book.pair_id else user_id
+    return book_progress(db, book, user_id, target_partner_id)
+
+
 def effective_user_book_progress(db: Session, book: Book, user_id: str) -> int:
     """共读本书进度：book 进度、日记最高页；已在读的共读书再与书城进度对齐。"""
     entry_max = repo.get_user_max_page(db, book.book_id, user_id)
@@ -103,6 +127,8 @@ def book_is_truly_finished(db: Session, book: Book) -> bool:
     total = int(book.total_pages or 0)
     if total <= 0:
         return True
+    if (book.pair_id or "").startswith(PERSONAL_PAIR_PREFIX):
+        return effective_user_book_progress(db, book, book.created_by) >= total
     pair = repo.get_pair_by_id(db, book.pair_id)
     if not pair:
         return False
@@ -653,6 +679,9 @@ def get_home(db: Session, current_user: Dict[str, Any]) -> Dict[str, Any]:
         "pair_requests": pending_requests,
     }
     if not pair:
+        personal_book = repo.get_current_book(db, personal_pair_id(current_user["user_id"]))
+        if personal_book:
+            result["current_book"] = book_progress(db, personal_book, current_user["user_id"], current_user["user_id"])
         return result
     target_partner_id = partner_id(pair, current_user["user_id"])
     partner = repo.get_user_by_id(db, target_partner_id)
@@ -678,7 +707,12 @@ def get_home(db: Session, current_user: Dict[str, Any]) -> Dict[str, Any]:
 def list_books(db: Session, current_user: Dict[str, Any], status: Optional[str]) -> Dict[str, Any]:
     pair = repo.get_active_pair(db, current_user["user_id"])
     if not pair:
-        return {"books": []}
+        return {
+            "books": [
+                book_progress(db, row, current_user["user_id"], current_user["user_id"])
+                for row in repo.list_books_for_pair(db, personal_pair_id(current_user["user_id"]), status=status)
+            ]
+        }
     target_partner_id = partner_id(pair, current_user["user_id"])
     return {
         "books": [
@@ -992,7 +1026,28 @@ def respond_book_switch_request(
 def create_book(db: Session, current_user: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
     pair = repo.get_active_pair(db, current_user["user_id"])
     if not pair:
-        raise ApiError(40301, "请先绑定共读伙伴后再添加书籍", 403)
+        user_id = current_user["user_id"]
+        pid = personal_pair_id(user_id)
+        with acquire_named_locks(f"create-book:{pid}"):
+            title, author, total_pages, _catalog_ref = _resolve_new_book_fields(db, payload)
+            current_reading = repo.get_current_book(db, pid)
+            if current_reading:
+                _switch_away_reading_book(db, current_reading)
+                db.flush()
+            book = _create_reading_book_row(
+                db,
+                pair_id=pid,
+                title=title[:200],
+                author=author[:200],
+                total_pages=total_pages,
+                catalog_ref=None,
+                created_by=user_id,
+            )
+            db.commit()
+            return {
+                "mode": "book",
+                "book": book_progress(db, book, user_id, user_id),
+            }
     if bool(payload.get("replace_current")):
         return create_book_switch_request(db, current_user, payload)
     with acquire_named_locks(f"create-book:{pair.pair_id}"):
@@ -1023,7 +1078,8 @@ def create_book(db: Session, current_user: Dict[str, Any], payload: Dict[str, An
 def get_current_pair_book(db: Session, current_user: Dict[str, Any]) -> Dict[str, Any]:
     pair = repo.get_active_pair(db, current_user["user_id"])
     if not pair:
-        return {"book": None}
+        book = repo.get_current_book(db, personal_pair_id(current_user["user_id"]))
+        return {"book": book_progress(db, book, current_user["user_id"], current_user["user_id"])} if book else {"book": None}
     book = repo.get_current_book(db, pair.pair_id)
     if not book:
         return {"book": None}
@@ -1052,15 +1108,15 @@ def create_entry(
     book = repo.get_book_by_id(db, book_id)
     if not book:
         raise ApiError(40411, "书籍不存在", 404)
-    pair = repo.get_active_pair(db, current_user["user_id"])
-    if not pair or pair.pair_id != book.pair_id:
+    pair = can_access_book(db, book, current_user["user_id"])
+    if not pair and not is_personal_book(book, current_user["user_id"]):
         raise ApiError(40302, "无权操作这本书", 403)
     if book.status != "reading":
         raise ApiError(40022, "这本书已归档，不能再更新进度", 400)
 
     duplicated = repo.get_duplicate_entry(db, book_id, current_user["user_id"], client_request_id)
     if duplicated:
-        return book_progress(db, book, current_user["user_id"], partner_id(pair, current_user["user_id"]))
+        return book_progress_for_viewer(db, book, current_user["user_id"])
 
     current_page = effective_user_book_progress(db, book, current_user["user_id"])
     final_page = int(book.total_pages) if mark_finished else int(page)
@@ -1084,7 +1140,7 @@ def create_entry(
     )
     db.add(entry)
 
-    target_partner_id = partner_id(pair, current_user["user_id"])
+    target_partner_id = partner_id(pair, current_user["user_id"]) if pair else current_user["user_id"]
     partner_progress = effective_user_book_progress(db, book, target_partner_id)
     if final_page >= int(book.total_pages) and partner_progress >= int(book.total_pages):
         book.status = BOOK_STATUS_FINISHED
@@ -1109,11 +1165,11 @@ def list_book_entries(db: Session, current_user: Dict[str, Any], book_id: str, p
     book = repo.get_book_by_id(db, book_id)
     if not book:
         raise ApiError(40411, "书籍不存在", 404)
-    pair = repo.get_active_pair(db, current_user["user_id"])
-    if not pair or pair.pair_id != book.pair_id:
+    pair = can_access_book(db, book, current_user["user_id"])
+    if not pair and not is_personal_book(book, current_user["user_id"]):
         raise ApiError(40302, "无权查看这本书", 403)
     my_progress = effective_user_book_progress(db, book, current_user["user_id"])
-    target_partner_id = partner_id(pair, current_user["user_id"])
+    target_partner_id = partner_id(pair, current_user["user_id"]) if pair else current_user["user_id"]
     partner_progress = effective_user_book_progress(db, book, target_partner_id)
     total_entries = repo.count_entries_for_book(db, book_id)
     offset = (page - 1) * page_size
@@ -1189,8 +1245,8 @@ def put_book_read_mark(db: Session, current_user: Dict[str, Any], book_id: str, 
     book = repo.get_book_by_id(db, book_id)
     if not book:
         raise ApiError(40411, "书籍不存在", 404)
-    pair = repo.get_active_pair(db, current_user["user_id"])
-    if not pair or pair.pair_id != book.pair_id:
+    pair = can_access_book(db, book, current_user["user_id"])
+    if not pair and not is_personal_book(book, current_user["user_id"]):
         raise ApiError(40302, "无权操作这本书", 403)
     target_time = utc_now()
     if last_entry_id:
@@ -1211,9 +1267,9 @@ def reply_entry(db: Session, current_user: Dict[str, Any], entry_id: str, conten
     if not entry:
         raise ApiError(40412, "笔记不存在", 404)
     book = repo.get_book_by_id(db, entry.book_id)
-    pair = repo.get_active_pair(db, current_user["user_id"])
-    if not pair or not book or pair.pair_id != book.pair_id:
-        raise ApiError(40303, "无权回复这条笔记", 403)
+    pair = can_access_book(db, book, current_user["user_id"]) if book else None
+    if not pair and (not book or not is_personal_book(book, current_user["user_id"])):
+        raise ApiError(40303, "无权回复这条记录", 403)
     my_progress = effective_user_book_progress(db, book, current_user["user_id"])
     if entry.user_id != current_user["user_id"] and int(entry.page) > my_progress:
         raise ApiError(40031, "这条笔记还未解锁，暂时不能回复", 400)

@@ -103,6 +103,42 @@ def test_phone_login_with_debug_phone_number(client):
     assert repeat.json()["data"]["user"]["user_id"] == data["user"]["user_id"]
 
 
+def test_personal_book_flow_without_pair(client):
+    token = _login(client, "open_personal_book_flow")
+
+    created = client.post(
+        "/api/v2/books",
+        json={"title": "个人阅读书", "author": "作者", "total_pages": 120},
+        headers=_auth(token),
+    )
+    assert created.status_code == 200, created.text
+    book = created.json()["data"]["book"]
+    assert created.json()["data"]["mode"] == "book"
+    assert book["title"] == "个人阅读书"
+    assert book["my_progress"] == 0
+
+    home = client.get("/api/v2/home", headers=_auth(token))
+    assert home.status_code == 200, home.text
+    assert home.json()["data"]["pair"] is None
+    assert home.json()["data"]["current_book"]["book_id"] == book["book_id"]
+
+    entry = client.post(
+        f"/api/v2/books/{book['book_id']}/entries",
+        json={"page": 12, "note_content": "今天读到这里"},
+        headers=_auth(token),
+    )
+    assert entry.status_code == 200, entry.text
+    assert entry.json()["data"]["my_progress"] == 12
+
+    entries = client.get(f"/api/v2/books/{book['book_id']}/entries", headers=_auth(token))
+    assert entries.status_code == 200, entries.text
+    assert entries.json()["data"]["entries"][0]["note_content"] == "今天读到这里"
+
+    history = client.get("/api/v2/users/me/reading-history?page=1&page_size=10", headers=_auth(token))
+    assert history.status_code == 200, history.text
+    assert any(item["book_id"] == book["book_id"] for item in history.json()["data"]["items"])
+
+
 def test_embedded_test_users_can_bind(client):
     login_a = client.post("/api/v2/auth/test-login", json={"role": "a"})
     login_b = client.post("/api/v2/auth/test-login", json={"role": "b"})
