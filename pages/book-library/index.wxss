@@ -285,6 +285,7 @@
 
 .detail-sheet {
   width: 100%;
+  max-height: 82vh;
   padding: 28rpx;
   border-radius: 32rpx 32rpx 0 0;
   background: #fffaf2;
@@ -313,9 +314,15 @@
   background: #f0e6d6;
 }
 
+.detail-scroll {
+  max-height: 58vh;
+}
+
 .detail-body {
   display: flex;
+  align-items: flex-start;
   gap: 24rpx;
+  padding-bottom: 8rpx;
 }
 
 .detail-cover {
@@ -356,6 +363,8 @@
   color: #6e6255;
   font-size: 26rpx;
   line-height: 1.55;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .detail-actions {

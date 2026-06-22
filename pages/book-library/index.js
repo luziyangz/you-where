@@ -1,4 +1,4 @@
-const { createBook, fetchBooks, fetchHome, requestBookSwitch, storeSearchBooks } = require('../../services/api');
+const { createBook, fetchBooks, fetchHome, storeSearchBooks } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
 const { enableWechatShareMenu, buildAppShare } = require('../../utils/share');
 
@@ -276,9 +276,10 @@ Page({
     const payload = {
       title: book.title,
       author: book.author === '作者未详' ? '' : book.author,
-      total_pages: book.total_pages
+      total_pages: book.total_pages,
+      replace_current: !!app.globalData.currentBook
     };
-    const addRequest = app.globalData.pair && app.globalData.currentBook ? requestBookSwitch(payload) : createBook(payload);
+    const addRequest = createBook(payload);
     this.setData({ addingId: book.id });
     try {
       const result = await addRequest;

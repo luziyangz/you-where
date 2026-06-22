@@ -122,15 +122,17 @@
         <text class="detail-title">书籍资料</text>
         <view class="detail-close" bindtap="onCloseDetail">×</view>
       </view>
-      <view class="detail-body" wx:if="{{activeBook}}">
-        <image wx:if="{{activeBook.cover_url}}" class="detail-cover" src="{{activeBook.cover_url}}" mode="aspectFill" />
-        <view wx:else class="detail-cover detail-cover-fallback">{{activeBook.cover_initial}}</view>
-        <view class="detail-info">
-          <view class="detail-book-title">{{activeBook.title}}</view>
-          <view class="detail-meta">{{activeBook.meta}}</view>
-          <view class="detail-desc">{{activeBook.reason}}</view>
+      <scroll-view class="detail-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+        <view class="detail-body" wx:if="{{activeBook}}">
+          <image wx:if="{{activeBook.cover_url}}" class="detail-cover" src="{{activeBook.cover_url}}" mode="aspectFill" />
+          <view wx:else class="detail-cover detail-cover-fallback">{{activeBook.cover_initial}}</view>
+          <view class="detail-info">
+            <view class="detail-book-title">{{activeBook.title}}</view>
+            <view class="detail-meta">{{activeBook.meta}}</view>
+            <view class="detail-desc">{{activeBook.reason}}</view>
+          </view>
         </view>
-      </view>
+      </scroll-view>
       <view class="detail-actions">
         <button class="detail-btn ghost" bindtap="onCloseDetail">取消</button>
         <button class="detail-btn primary" loading="{{addingId === activeBook.id}}" bindtap="onAddBook">加入记录</button>
