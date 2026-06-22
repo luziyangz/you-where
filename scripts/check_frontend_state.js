@@ -31,6 +31,8 @@ const frontendTargets = [
   'utils/share.js',
   'services/api/profile.js',
   'services/api/store.js',
+  'pages/book-library/index.js',
+  'pages/book-library/index.wxml',
   'pages/home/index.js',
   'pages/home/index.json',
   'pages/home/index.wxml',
@@ -55,13 +57,14 @@ disabledPageDirs.forEach((dir) => {
 });
 
 assert.ok(appJson.pages.includes('pages/home/index'), 'home page must remain registered');
+assert.ok(appJson.pages.includes('pages/book-library/index'), 'book library page must remain registered');
 assert.ok(appJson.pages.includes('pages/profile/index'), 'profile page must remain registered');
 assert.ok(appJson.pages.includes('pages/reading-history/index'), 'history page must remain registered');
 
 const tabRoutes = appJson.tabBar.list.map((item) => item.pagePath);
 assert.deepStrictEqual(tabRoutes, [
   'pages/home/index',
-  'pages/reading-history/index',
+  'pages/book-library/index',
   'pages/progress/index',
   'pages/profile/index'
 ]);
@@ -77,6 +80,7 @@ assert.ok(profileWxml.includes('login-consent-panel'), 'login stays available fr
 
 const authGate = require(path.join(ROOT_DIR, 'utils/auth-gate.js'));
 assert.strictEqual(authGate.isPublicUrl('/pages/home/index'), true);
+assert.strictEqual(authGate.isPublicUrl('/pages/book-library/index'), true);
 assert.strictEqual(authGate.isPublicUrl('/pages/reading-history/index'), true);
 assert.strictEqual(authGate.isPublicUrl('/pages/progress/index'), true);
 assert.strictEqual(authGate.isPublicUrl('/pages/profile/index'), true);
@@ -111,7 +115,7 @@ frontendTargets.forEach((target) => {
 const api = require(path.join(ROOT_DIR, 'services/api.js'));
 assert.strictEqual(typeof api.fetchReaderOptions, 'undefined');
 assert.strictEqual(typeof api.saveReaderOptions, 'undefined');
-assert.strictEqual(typeof api.storeSearchBooks, 'undefined');
+assert.strictEqual(typeof api.storeSearchBooks, 'function');
 assert.strictEqual(typeof api.storeReadPage, 'undefined');
 
 console.log('frontend review-safe state check ok');

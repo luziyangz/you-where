@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/index",
+    "pages/book-library/index",
     "pages/progress/index",
     "pages/profile/index",
     "pages/reading-history/index",
@@ -33,8 +34,8 @@
         "text": "共读"
       },
       {
-        "pagePath": "pages/reading-history/index",
-        "text": "历史"
+        "pagePath": "pages/book-library/index",
+        "text": "书库"
       },
       {
         "pagePath": "pages/progress/index",

@@ -1,0 +1,73 @@
+<view class="library-page">
+  <view class="library-head">
+    <view>
+      <view class="eyebrow">书库</view>
+      <view class="page-title">挑一本加入记录</view>
+      <view class="page-desc">这里展示书名、作者和页数资料，用来建立阅读进度，不展示书籍正文。</view>
+    </view>
+    <button class="manual-btn" bindtap="onManualAdd">手动添加</button>
+  </view>
+
+  <view class="search-box">
+    <icon type="search" size="16" color="#9b9287" />
+    <input
+      class="search-input"
+      placeholder="搜索书名、作者"
+      value="{{keyword}}"
+      bindinput="onKeywordInput"
+      bindconfirm="onSearchConfirm"
+      confirm-type="search"
+    />
+  </view>
+
+  <scroll-view class="category-scroll" scroll-x enable-flex>
+    <view class="category-list">
+      <view
+        wx:for="{{categories}}"
+        wx:key="key"
+        class="category-item {{selectedCategory === item.key ? 'active' : ''}}"
+        data-key="{{item.key}}"
+        bindtap="onCategoryTap"
+      >{{item.name}}</view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{loading && !books.length}}" class="book-list">
+    <view wx:for="{{[1,2,3,4]}}" wx:key="*this" class="book-row skeleton">
+      <view class="cover"></view>
+      <view class="book-main">
+        <view class="sk sk-title"></view>
+        <view class="sk sk-line"></view>
+        <view class="sk sk-line short"></view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{!books.length}}" class="empty-state">
+    <view class="empty-title">没有找到匹配书籍</view>
+    <view class="empty-desc">可以换个关键词，或直接手动添加书名和页数。</view>
+    <button class="empty-btn" bindtap="onManualAdd">手动添加</button>
+  </view>
+
+  <view wx:else class="book-list">
+    <view wx:for="{{books}}" wx:key="id" class="book-row">
+      <image wx:if="{{item.cover_url}}" class="cover" src="{{item.cover_url}}" mode="aspectFill" />
+      <view wx:else class="cover cover-fallback">{{item.cover_initial}}</view>
+      <view class="book-main">
+        <view class="book-title">{{item.title}}</view>
+        <view class="book-meta">{{item.author}} · {{item.tag}}</view>
+        <view class="book-desc">{{item.desc}}</view>
+      </view>
+      <button
+        class="add-btn"
+        loading="{{addingId === item.id}}"
+        disabled="{{!!addingId}}"
+        data-id="{{item.id}}"
+        catchtap="onAddBook"
+      >加入</button>
+    </view>
+  </view>
+
+  <view wx:if="{{loading && books.length}}" class="footer">加载中...</view>
+  <view wx:if="{{!loading && books.length && !hasMore}}" class="footer">已显示全部</view>
+</view>

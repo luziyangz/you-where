@@ -1,4 +1,5 @@
 const HOME_TAB = '/pages/home/index';
+const BOOK_LIBRARY_TAB = '/pages/book-library/index';
 const HISTORY_TAB = '/pages/reading-history/index';
 const PROGRESS_TAB = '/pages/progress/index';
 const PROFILE_TAB = '/pages/profile/index';
@@ -24,8 +25,8 @@ Component({
         icon: "icon-home"
       },
       {
-        pagePath: HISTORY_TAB,
-        text: "历史",
+        pagePath: BOOK_LIBRARY_TAB,
+        text: "书库",
         icon: "icon-book"
       },
       {
@@ -80,7 +81,7 @@ Component({
         wx.switchTab({ url: PROGRESS_TAB });
         return;
       }
-      wx.switchTab({ url: HISTORY_TAB });
+      wx.switchTab({ url: BOOK_LIBRARY_TAB });
     }
   }
 })

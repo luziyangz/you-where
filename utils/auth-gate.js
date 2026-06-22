@@ -12,6 +12,7 @@ const TAB_ROUTES = new Set([
 
 const PUBLIC_ROUTES = new Set([
   HOME_ROUTE,
+  'pages/book-library/index',
   'pages/reading-history/index',
   'pages/progress/index',
   'pages/profile/index',

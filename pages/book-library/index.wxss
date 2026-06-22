@@ -1,0 +1,218 @@
+.library-page {
+  min-height: 100vh;
+  padding: 28rpx 28rpx 180rpx;
+  box-sizing: border-box;
+  background: #fbf6ec;
+  color: #2f2a24;
+}
+
+.library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin-bottom: 26rpx;
+}
+
+.eyebrow {
+  font-size: 24rpx;
+  color: #8f7f6e;
+  margin-bottom: 8rpx;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: 700;
+}
+
+.page-desc {
+  margin-top: 12rpx;
+  max-width: 520rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #7b7064;
+}
+
+.manual-btn,
+.empty-btn {
+  border: 0;
+  border-radius: 999rpx;
+  background: #2f7d62;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 0 28rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  white-space: nowrap;
+}
+
+.manual-btn::after,
+.empty-btn::after,
+.add-btn::after {
+  border: 0;
+}
+
+.search-box {
+  height: 82rpx;
+  border-radius: 24rpx;
+  background: #fffaf2;
+  border: 1rpx solid #eadfce;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.category-scroll {
+  margin: 24rpx -28rpx 20rpx;
+  white-space: nowrap;
+}
+
+.category-list {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 28rpx;
+}
+
+.category-item {
+  padding: 14rpx 24rpx;
+  border-radius: 999rpx;
+  background: #f0e6d6;
+  color: #756a5f;
+  font-size: 25rpx;
+}
+
+.category-item.active {
+  background: #2f7d62;
+  color: #fff;
+}
+
+.book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.book-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx;
+  border-radius: 20rpx;
+  background: #fffaf2;
+  border: 1rpx solid #eadfce;
+}
+
+.cover {
+  width: 92rpx;
+  height: 124rpx;
+  flex: 0 0 92rpx;
+  border-radius: 12rpx;
+  background: #d8c4a7;
+}
+
+.cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 38rpx;
+  font-weight: 700;
+}
+
+.book-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.book-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.book-meta {
+  margin-top: 8rpx;
+  color: #83786d;
+  font-size: 24rpx;
+}
+
+.book-desc {
+  margin-top: 8rpx;
+  color: #a08f7d;
+  font-size: 24rpx;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.add-btn {
+  width: 104rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  border-radius: 999rpx;
+  background: #f0e6d6;
+  color: #2f2a24;
+  font-size: 25rpx;
+  padding: 0;
+}
+
+.empty-state {
+  margin-top: 120rpx;
+  text-align: center;
+  color: #7b7064;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2f2a24;
+}
+
+.empty-desc {
+  margin: 16rpx auto 28rpx;
+  max-width: 520rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.footer {
+  padding: 32rpx 0;
+  text-align: center;
+  color: #a08f7d;
+  font-size: 24rpx;
+}
+
+.skeleton .cover,
+.sk {
+  background: linear-gradient(90deg, #eee4d6 0%, #f8efe4 50%, #eee4d6 100%);
+}
+
+.sk {
+  height: 24rpx;
+  border-radius: 999rpx;
+  margin-bottom: 16rpx;
+}
+
+.sk-title {
+  width: 60%;
+  height: 30rpx;
+}
+
+.sk-line {
+  width: 86%;
+}
+
+.sk-line.short {
+  width: 48%;
+}
