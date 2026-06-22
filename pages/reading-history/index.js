@@ -48,23 +48,15 @@ Page({
     this.loadHistory(false);
   },
 
-  onGoBookstore() {
+  onGoHomeAddBook() {
     wx.switchTab({
-      url: '/pages/bookstore/index'
+      url: '/pages/home/index'
     });
   },
 
-  // 从阅读历史进入书目：有书城 catalog 则详情页；否则若为当前共读则进进度 Tab
   onOpenHistoryBook(e) {
     const dataset = (e.currentTarget && e.currentTarget.dataset) || {};
-    const catalogId = dataset.catalogId;
     const bookId = dataset.bookId;
-    if (catalogId) {
-      wx.navigateTo({
-        url: `/pages/book-detail/index?catalog_id=${encodeURIComponent(String(catalogId))}`
-      });
-      return;
-    }
     const cur = app.globalData.currentBook;
     if (bookId && cur && String(cur.book_id) === String(bookId)) {
       wx.switchTab({
@@ -73,7 +65,7 @@ Page({
       return;
     }
     wx.showToast({
-      title: '此书暂无书城详情，一般为手动添加',
+      title: '历史记录仅用于回顾进度',
       icon: 'none'
     });
   }

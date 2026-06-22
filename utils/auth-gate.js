@@ -5,13 +5,14 @@ let navigationGuardInstalled = false;
 
 const TAB_ROUTES = new Set([
   'pages/home/index',
-  'pages/bookstore/index',
+  'pages/reading-history/index',
   'pages/progress/index',
   'pages/profile/index'
 ]);
 
 const PUBLIC_ROUTES = new Set([
   HOME_ROUTE,
+  'pages/profile/index',
   'pages/privacy-policy/index',
   'pages/user-agreement/index',
   'pages/privacy-authorize/index'

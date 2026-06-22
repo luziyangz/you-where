@@ -2,8 +2,5 @@
   "navigationBarTitleText": "共读",
   "navigationBarBackgroundColor": "#fbf6ec",
   "navigationBarTextStyle": "black",
-  "backgroundColor": "#fbf6ec",
-  "usingComponents": {
-    "login-consent-panel": "/components/login-consent-panel/index"
-  }
+  "backgroundColor": "#fbf6ec"
 }

@@ -1,6 +1,7 @@
 const HOME_TAB = '/pages/home/index';
-const BOOKSTORE_TAB = '/pages/bookstore/index';
+const HISTORY_TAB = '/pages/reading-history/index';
 const PROGRESS_TAB = '/pages/progress/index';
+const PROFILE_TAB = '/pages/profile/index';
 
 const isLoggedIn = () => {
   try {
@@ -23,8 +24,8 @@ Component({
         icon: "icon-home"
       },
       {
-        pagePath: BOOKSTORE_TAB,
-        text: "书房",
+        pagePath: HISTORY_TAB,
+        text: "历史",
         icon: "icon-book"
       },
       {
@@ -33,7 +34,7 @@ Component({
         icon: "icon-journal"
       },
       {
-        pagePath: "/pages/profile/index",
+        pagePath: PROFILE_TAB,
         text: "我的",
         icon: "icon-profile"
       }
@@ -45,7 +46,7 @@ Component({
       const url = data.path;
       const index = Number(data.index);
 
-      if (!isLoggedIn() && url !== HOME_TAB) {
+      if (!isLoggedIn() && url !== HOME_TAB && url !== PROFILE_TAB) {
         wx.showToast({
           title: '请先登录后使用',
           icon: 'none'
@@ -87,7 +88,7 @@ Component({
         wx.switchTab({ url: PROGRESS_TAB });
         return;
       }
-      wx.switchTab({ url: BOOKSTORE_TAB });
+      wx.switchTab({ url: HISTORY_TAB });
     }
   }
 })

@@ -6,14 +6,14 @@
 
   <block wx:if="{{!isLogin}}">
     <view class="state-wrap login-state">
-      <view class="eyebrow">双人共读书房</view>
-      <view class="hero-title">和重要的人，一起读完一本书</view>
-      <view class="hero-desc">登录后生成你的共读码，邀请伴侣或朋友建立只属于两个人的阅读关系。</view>
+      <view class="eyebrow">阅读进度工具</view>
+      <view class="hero-title">先了解功能，再决定是否登录</view>
+      <view class="hero-desc">这里用于手动记录书名、页码、阅读状态和已绑定关系内的进度备注。当前版本仅提供进度管理能力。</view>
 
       <view class="preview-card">
         <view class="preview-top">
           <view class="seal">共读</view>
-          <view class="preview-copy">今日书房还未开启</view>
+          <view class="preview-copy">无需授权即可浏览功能说明</view>
         </view>
         <view class="duo-row">
           <view class="duo-person">
@@ -29,26 +29,18 @@
           </view>
         </view>
         <view class="topic-chips">
-          <text>心性共修</text>
-          <text>国学经典</text>
-          <text>经络养生</text>
+          <text>手动书名</text>
+          <text>页码进度</text>
+          <text>阅读备注</text>
         </view>
       </view>
 
-      <login-consent-panel bind:statuschange="onLoginConsentChange" />
       <view class="auth-actions">
         <button
           class="btn-primary w-full"
-          loading="{{loginLoading}}"
-          disabled="{{!canProceedLogin || loginLoading}}"
-          bindtap="onTapLogin"
-        >微信一键登录</button>
-        <button
-          wx:if="{{showReviewLogin}}"
-          class="btn-review-login w-full"
-          disabled="{{!canProceedLogin || reviewLoginLoading}}"
-          bindtap="onOpenReviewLogin"
-        >审核测试登录</button>
+          bindtap="onGoProfileLogin"
+        >需要保存进度时再登录</button>
+        <button class="btn-plain w-full" bindtap="onPreviewManualRecord">查看可用功能</button>
       </view>
     </view>
   </block>
@@ -98,8 +90,8 @@
         <view class="switch-desc">{{pairRequestSub}}</view>
       </view>
 
-      <button class="btn-primary w-full" bindtap="onGoToPartner">去邀请伙伴</button>
-      <button class="btn-plain w-full" bindtap="onGoToBookstore">先看看主题书房</button>
+      <button class="btn-primary w-full" bindtap="onGoToPartner">管理共读关系</button>
+      <button class="btn-plain w-full" bindtap="onPreviewManualRecord">查看记录方式</button>
     </view>
   </block>
 
@@ -173,9 +165,8 @@
           <view class="book-spine three"></view>
         </view>
         <view class="empty-title">书桌已经摆好</view>
-        <view class="empty-desc">从主题书房选一本中文内容，或手动添加你们正在读的书。</view>
-        <button class="btn-primary w-full" bindtap="onGoToBookstore">去主题书房选书</button>
-        <button class="btn-secondary w-full" bindtap="onTapAddBook">手动添加一本</button>
+        <view class="empty-desc">手动添加你们正在读的书名、作者和总页数，用于记录阅读进度。</view>
+        <button class="btn-primary w-full" bindtap="onTapAddBook">手动添加一本</button>
         <view class="text-link" bindtap="onGoManagePartner">管理伙伴关系</view>
       </view>
     </view>
@@ -255,7 +246,7 @@
             <view class="reading-label">今日共读 · 第 {{currentBook.reading_days || 1}} 天</view>
             <view class="reading-main">{{currentBook.relationshipTip}}</view>
             <view class="reading-note" wx:if="{{currentBook.total_pages > 0}}">{{currentBook.progressLine}}</view>
-            <view class="reading-open-hint" wx:if="{{currentBook.catalog_id}}">轻触打开正文继续读</view>
+            <view class="reading-open-hint">轻触查看进度记录</view>
           </view>
         </view>
       </view>
@@ -265,7 +256,7 @@
           <view class="action-title">两个人的共读书桌</view>
           <view class="action-desc">页码、状态和备注保存在「我们的记录」；仅用于已绑定共读关系内的进度同步。</view>
         </view>
-        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">继续阅读</button>
+        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">查看进度</button>
         <button class="btn-secondary w-full" bindtap="onGotoProgress">进我们的记录</button>
         <view class="action-links">
           <text class="action-link" bindtap="onGoManagePartner">共读关系</text>

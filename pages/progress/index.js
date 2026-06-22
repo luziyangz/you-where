@@ -2,8 +2,6 @@ const { createEntry, fetchBookEntries, fetchHome, markBookEntriesRead, replyEntr
 const { COPY, formatApiError } = require('../../utils/copywriting');
 const { requireLogin } = require('../../utils/auth-gate');
 const { openReportPage } = require('../../utils/report-nav');
-const { navigateTo: safeNavigateTo } = require('../../utils/safe-navigate');
-const { buildReaderUrl } = require('../../utils/reading-progress-cache');
 const { isSocialSharingEnabled } = require('../../utils/feature-flags');
 
 const app = getApp();
@@ -55,14 +53,8 @@ Page({
   // 弹窗内容区域阻止事件冒泡（WXML 的 catchtap 需要绑定方法名）
   noop() {},
 
-  /** 内置书城书目：进入正文阅读器（沿用当前「我的进度」页码） */
-  onTapOpenPairReader() {
-    const book = this.data.book;
-    if (!book || !book.catalog_id) {
-      return;
-    }
-    const cid = book.catalog_id;
-    safeNavigateTo(buildReaderUrl(cid, { page: book.my_progress || 0 }), this);
+  onTapOpenPairProgress() {
+    this.onOpenComposer();
   },
 
   onLoad(query) {

@@ -11,7 +11,7 @@
     <view class="empty-title">还没有阅读历史</view>
     <view class="empty-desc">绑定伙伴并开启第一本书后，共读足迹会出现在这里。</view>
     <view class="empty-actions">
-      <button class="btn-primary w-full" bindtap="onGoBookstore">去主题书房选书</button>
+      <button class="btn-primary w-full" bindtap="onGoHomeAddBook">回首页手动添加</button>
     </view>
   </view>
 
@@ -24,7 +24,6 @@
         hover-class="history-card--active"
         bindtap="onOpenHistoryBook"
         data-book-id="{{item.book_id}}"
-        data-catalog-id="{{item.catalog_id}}"
       >
         <view class="history-main">
           <view class="history-title">{{item.title}}</view>

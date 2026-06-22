@@ -1,7 +1,7 @@
 const app = getApp();
 
 const RESUME_HINTS = {
-  txt_import: '同意后将返回书房，并继续打开微信聊天记录选择 TXT。'
+  txt_import: '同意后将返回首页。'
 };
 
 Page({
@@ -18,7 +18,7 @@ Page({
     const sceneRaw = (query && query.scene) || '';
     const resume = resumeRaw
       ? decodeURIComponent(resumeRaw)
-      : sceneRaw === 'bookstore_txt_import'
+      : sceneRaw === 'manual_record_file'
         ? 'txt_import'
         : sceneRaw
           ? decodeURIComponent(sceneRaw)
@@ -114,7 +114,7 @@ Page({
     wx.navigateBack({
       delta: 1,
       fail: () => {
-        wx.switchTab({ url: '/pages/bookstore/index' });
+        wx.switchTab({ url: '/pages/home/index' });
       }
     });
   },

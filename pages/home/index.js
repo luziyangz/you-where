@@ -2,8 +2,6 @@ const { createBook, fetchHome, requestBookSwitch, respondBookSwitch, respondPair
 const { COPY, formatApiError } = require('../../utils/copywriting');
 const { pairRequestSub, pairRequestTitle } = require('../../utils/pair-request');
 const { requireLogin } = require('../../utils/auth-gate');
-const { navigateTo: safeNavigateTo } = require('../../utils/safe-navigate');
-const { buildReaderUrl } = require('../../utils/reading-progress-cache');
 const { buildHomeShare, enableWechatShareMenu } = require('../../utils/share');
 
 const app = getApp();
@@ -309,13 +307,20 @@ Page({
     });
   },
 
-  onGoToBookstore() {
-    if (!this.data.isLogin) {
-      wx.showToast({ title: COPY.common.loginRequired, icon: 'none' });
-      return;
-    }
-    wx.switchTab({
-      url: '/pages/bookstore/index'
+  onGoToManualAdd() {
+    this.onTapAddBook();
+  },
+
+  onGoProfileLogin() {
+    wx.switchTab({ url: '/pages/profile/index' });
+  },
+
+  onPreviewManualRecord() {
+    wx.showModal({
+      title: '可用功能',
+      content: '可手动添加书名、作者和总页数，登录后保存页码进度、读完状态和阅读备注。当前版本仅提供阅读进度管理能力。',
+      showCancel: false,
+      confirmText: '知道了'
     });
   },
 
@@ -502,21 +507,12 @@ Page({
     wx.showToast({ title: '该功能暂不可用', icon: 'none' });
   },
 
-  // 从共读首页进入书目：已有共读中时直接进入正文阅读器；无书城 catalog 的手动书目只能去日记页
   onOpenCurrentBook() {
     if (!requireLogin({ message: COPY.common.loginRequired })) {
       return;
     }
     const book = this.data.currentBook;
     if (!book || !book.book_id) {
-      return;
-    }
-    const cid = book.catalog_id;
-    if (cid) {
-      const url = buildReaderUrl(cid, { page: book.my_progress || 0 });
-      if (url) {
-        safeNavigateTo(url, this);
-      }
       return;
     }
     wx.switchTab({
@@ -548,7 +544,7 @@ Page({
       return;
     }
     if (!this.data.currentBook) {
-      this.onGoToBookstore();
+      this.onTapAddBook();
     } else {
       this.onRecordToday();
     }

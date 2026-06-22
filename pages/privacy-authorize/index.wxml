@@ -2,7 +2,7 @@
   <view class="card">
     <view class="title">需要您同意隐私指引</view>
     <view class="desc">
-      从聊天记录导入 TXT、复制共读码等能力，需先阅读并同意微信平台要求的 {{contractName}}。
+      复制共读码等能力，需先阅读并同意微信平台要求的 {{contractName}}。
     </view>
     <view class="referrer" wx:if="{{referrer}}">触发来源：{{referrer}}</view>
     <view class="hint" wx:if="{{resumeHint}}">{{resumeHint}}</view>

@@ -58,7 +58,7 @@
   gap: 22rpx;
 }
 
-.page-head--reader:active {
+.page-head:active {
   opacity: 0.92;
 }
 
@@ -241,7 +241,7 @@
 }
 
 .progress-card-top,
-.reader-row,
+.progress-row,
 .section-header,
 .note-header {
   display: flex;
@@ -269,15 +269,15 @@
   font-weight: 800;
 }
 
-.reader-row {
+.progress-row {
   margin-top: 30rpx;
 }
 
-.partner-reader {
+.partner-progress {
   margin-top: 26rpx;
 }
 
-.reader-meta {
+.progress-meta {
   display: flex;
   align-items: center;
   gap: 14rpx;

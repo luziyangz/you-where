@@ -530,9 +530,9 @@ Page({
     });
   },
 
-  onGoBookstore() {
+  onGoHomeAddBook() {
     wx.switchTab({
-      url: '/pages/bookstore/index'
+      url: '/pages/home/index'
     });
   },
 

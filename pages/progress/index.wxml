@@ -11,12 +11,12 @@
   </block>
 
   <block wx:else>
-    <view class="page-head {{book.catalog_id ? 'page-head--reader' : ''}}" bindtap="onTapOpenPairReader">
+    <view class="page-head" bindtap="onTapOpenPairProgress">
       <view>
         <view class="eyebrow">我们的记录</view>
         <view class="page-title">{{book.title}}</view>
         <view class="page-desc">{{book.author || '作者未填写'}} · 第{{book.reading_days || 1}}天</view>
-        <view class="page-head-hint" wx:if="{{book.catalog_id}}">点此打开正文阅读</view>
+        <view class="page-head-hint">点此更新阅读进度</view>
       </view>
       <view class="book-seal">同读</view>
     </view>

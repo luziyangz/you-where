@@ -73,37 +73,14 @@ const saveReminderConfig = (payload) => {
   });
 };
 
-/** 书城阅读器偏好（字号、主题、亮度），账号级 */
-const fetchReaderOptions = () => {
-  return requestV2({
-    url: '/users/me/reader-options',
-    method: 'GET'
-  });
-};
-
-const saveReaderOptions = (payload) => {
-  const p = payload || {};
-  return requestV2({
-    url: '/users/me/reader-options',
-    method: 'PUT',
-    data: {
-      font_size: p.font_size,
-      reading_mode: p.reading_mode,
-      brightness: p.brightness
-    }
-  });
-};
-
 module.exports = {
   fetchMe,
   fetchProfileMe,
   fetchProfileStats,
-  fetchReaderOptions,
   fetchReadingGoal,
   fetchReadingHistory,
   fetchReminderConfig,
   fetchStats,
-  saveReaderOptions,
   saveReadingGoal,
   saveReminderConfig,
   updateMe

@@ -19,22 +19,22 @@ const buildAppShare = (overrides = {}) => ({
 });
 
 const buildHomeShare = () => buildAppShare({
-  title: '邀请你一起共读书房',
+  title: '邀请你一起记录阅读进度',
   path: DEFAULT_SHARE_PATH
 });
 
-const buildBookstoreShare = () => buildAppShare({
-  title: '来看看这个共读书房',
-  path: '/pages/bookstore/index'
+const buildProgressToolShare = () => buildAppShare({
+  title: '来看看这个阅读进度工具',
+  path: DEFAULT_SHARE_PATH
 });
 
-const buildBookDetailShare = (book, catalogId) => {
-  if (!book || !catalogId) {
-    return buildBookstoreShare();
+const buildProgressRecordShare = (book) => {
+  if (!book) {
+    return buildProgressToolShare();
   }
   return buildAppShare({
-    title: `${book.title || '好书'} · 共读书房`,
-    path: `/pages/book-detail/index?catalog_id=${encodeURIComponent(String(catalogId))}`
+    title: `${book.title || '好书'} · 阅读进度`,
+    path: DEFAULT_SHARE_PATH
   });
 };
 
@@ -46,7 +46,7 @@ module.exports = {
   enableWechatShareMenu,
   buildAppShare,
   buildHomeShare,
-  buildBookstoreShare,
-  buildBookDetailShare,
+  buildProgressToolShare,
+  buildProgressRecordShare,
   buildCircleShare
 };

@@ -39,9 +39,6 @@ Page({
     this.setData({
       showReviewLogin: app.globalData.apiEnvVersion !== 'release'
     });
-    if (!requireLogin({ message: '请先登录后查看我的' })) {
-      return;
-    }
     this.initPage();
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({
@@ -353,7 +350,7 @@ Page({
   },
 
   onShareAppMessage() {
-    return buildAppShare({ title: '推荐一个双人共读书房给你' });
+    return buildAppShare({ title: '推荐一个阅读进度工具给你' });
   },
 
   onShareTimeline() {

@@ -4,7 +4,7 @@
   <block wx:if="{{!hasPartner}}">
     <view class="page-head">
       <view class="eyebrow">结伴邀请</view>
-      <view class="page-title">先把两个人放进同一间书房</view>
+      <view class="page-title">先建立共读关系</view>
       <view class="page-desc">结伴页只处理连接。绑定完成后，首页负责共读状态，日记页负责记录和回应。</view>
     </view>
 
@@ -86,8 +86,8 @@
   <block wx:else>
     <view class="page-head bound-head">
       <view class="eyebrow">共读关系</view>
-      <view class="page-title">你们已经在同一间书房</view>
-      <view class="page-desc">这里管理关系本身。要选书去书房，要记录和回应去日记。</view>
+      <view class="page-title">共读关系已建立</view>
+      <view class="page-desc">这里管理关系本身。要添加书名回首页，要更新页码去记录页。</view>
     </view>
 
     <view class="relationship-card">
@@ -142,13 +142,13 @@
         <view class="next-label">当前共读</view>
         <view class="next-title">{{currentBook.title}}</view>
         <view class="next-desc">去记录页更新今天读到哪里，或查看对方最近同步的进度备注。</view>
-        <button class="btn-primary w-full" bindtap="onGoProgress">去共读日记</button>
+        <button class="btn-primary w-full" bindtap="onGoProgress">去进度记录</button>
       </block>
       <block wx:else>
         <view class="next-label">下一步</view>
         <view class="next-title">还没有共同开始一本书</view>
-        <view class="next-desc">去主题书房选一本适合两个人慢慢读的书。</view>
-        <button class="btn-primary w-full" bindtap="onGoBookstore">去主题书房</button>
+        <view class="next-desc">回首页手动添加正在读的书名、作者和总页数。</view>
+        <button class="btn-primary w-full" bindtap="onGoHomeAddBook">回首页添加</button>
       </block>
       <button class="btn-secondary w-full" bindtap="onGoHome">回到共读首页</button>
     </view>
