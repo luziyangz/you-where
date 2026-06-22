@@ -6,14 +6,14 @@
 
   <block wx:if="{{!isLogin}}">
     <view class="state-wrap login-state">
-      <view class="eyebrow">一起读书</view>
-      <view class="hero-title">把你们的阅读进度放在一起</view>
-      <view class="hero-desc">记录正在读的书、读到哪一页，以及想留给彼此的一句话。需要保存和同步时，再登录就可以。</view>
+      <view class="eyebrow">共读</view>
+      <view class="hero-title">欢迎开启共读之旅</view>
+      <view class="hero-desc">登录后即可生成你的共读码，与 TA 开始同步阅读。</view>
 
       <view class="preview-card">
         <view class="preview-top">
           <view class="seal">共读</view>
-          <view class="preview-copy">先看看怎么记录，再决定是否开始</view>
+          <view class="preview-copy">和 TA 一起记录读到哪里，把慢慢读过的痕迹留在这里。</view>
         </view>
         <view class="duo-row">
           <view class="duo-person">
@@ -39,17 +39,17 @@
         <button
           class="btn-primary w-full"
           bindtap="onGoProfileLogin"
-        >开始记录</button>
-        <button class="btn-plain w-full" bindtap="onPreviewManualRecord">看看怎么记录</button>
+        >开始使用</button>
+        <button class="btn-plain w-full" bindtap="onGoToLibrary">先逛书库</button>
       </view>
     </view>
   </block>
 
   <block wx:elif="{{isLogin && !hasPartner}}">
     <view class="state-wrap bind-state">
-      <view class="eyebrow">等待连接</view>
-      <view class="hero-title">还差一个共读伙伴</view>
-      <view class="hero-desc">把你的共读码或二维码发给对方，绑定后首页会变成你们共同的阅读面板。</view>
+      <view class="eyebrow">寻找伙伴</view>
+      <view class="hero-title">寻找你的共读伙伴</view>
+      <view class="hero-desc">你还未绑定伙伴，快去寻找书搭子一起共读吧！</view>
 
       <view class="relation-card">
         <view class="relation-person">
@@ -90,8 +90,8 @@
         <view class="switch-desc">{{pairRequestSub}}</view>
       </view>
 
-      <button class="btn-primary w-full" bindtap="onTapAddBook">添加一本书</button>
-      <button class="btn-plain w-full" bindtap="onGoToPartner">管理共读关系</button>
+      <button class="btn-primary w-full" bindtap="onGoToPartner">去结伴</button>
+      <button class="btn-plain w-full" bindtap="onGoToLibrary">先去书库挑一本</button>
     </view>
   </block>
 
@@ -99,8 +99,8 @@
     <view class="content-wrap">
       <view class="section-hero">
         <view>
-          <view class="eyebrow">关系已建立</view>
-          <view class="page-title">选择你们的第一本书</view>
+          <view class="eyebrow">已绑定</view>
+          <view class="page-title">还没有正在共读的书</view>
         </view>
         <view class="mini-seal">二人</view>
       </view>
@@ -164,9 +164,10 @@
           <view class="book-spine two"></view>
           <view class="book-spine three"></view>
         </view>
-        <view class="empty-title">书桌已经摆好</view>
-        <view class="empty-desc">添加你们正在读的书名、作者和总页数，之后就能一起更新进度。</view>
-        <button class="btn-primary w-full" bindtap="onTapAddBook">添加一本书</button>
+        <view class="empty-title">还没有正在共读的书</view>
+        <view class="empty-desc">去书库挑一本，或手动添加你们正在读的书。</view>
+        <button class="btn-primary w-full" bindtap="onGoToLibrary">去书库挑一本</button>
+        <button class="btn-plain w-full" bindtap="onTapAddBook">手动添加一本</button>
         <view class="text-link" bindtap="onGoManagePartner">管理伙伴关系</view>
       </view>
     </view>
@@ -253,11 +254,11 @@
 
       <view class="action-card">
         <view class="action-copy">
-          <view class="action-title">两个人的共读书桌</view>
-          <view class="action-desc">页码、状态和备注保存在「我们的记录」；仅用于已绑定共读关系内的进度同步。</view>
+          <view class="action-title">接下来做什么</view>
+          <view class="action-desc">在进度页查看完整动态、回复伙伴，并继续记录页码和想法。</view>
         </view>
-        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">查看进度</button>
-        <button class="btn-secondary w-full" bindtap="onGotoProgress">进我们的记录</button>
+        <button class="btn-primary w-full" catchtap="onOpenCurrentBook">查看共读进度</button>
+        <button class="btn-secondary w-full" bindtap="onGoToLibrary">去书库换一本</button>
         <view class="action-links">
           <text class="action-link" bindtap="onGoManagePartner">共读关系</text>
         </view>

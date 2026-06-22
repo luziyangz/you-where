@@ -311,6 +311,10 @@ Page({
     this.onTapAddBook();
   },
 
+  onGoToLibrary() {
+    wx.switchTab({ url: '/pages/book-library/index' });
+  },
+
   onGoProfileLogin() {
     wx.switchTab({ url: '/pages/profile/index' });
   },
