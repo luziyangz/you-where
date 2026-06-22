@@ -75,6 +75,12 @@ assert.ok(!homeWxml.includes('test-login'), 'home must not expose review login o
 const profileWxml = readText('pages/profile/index.wxml');
 assert.ok(profileWxml.includes('login-consent-panel'), 'login stays available from profile only');
 
+const authGate = require(path.join(ROOT_DIR, 'utils/auth-gate.js'));
+assert.strictEqual(authGate.isPublicUrl('/pages/home/index'), true);
+assert.strictEqual(authGate.isPublicUrl('/pages/reading-history/index'), true);
+assert.strictEqual(authGate.isPublicUrl('/pages/progress/index'), true);
+assert.strictEqual(authGate.isPublicUrl('/pages/profile/index'), true);
+
 const sensitivePatterns = [
   /bookstore/i,
   /book-detail/i,

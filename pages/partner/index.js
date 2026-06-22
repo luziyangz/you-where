@@ -1,6 +1,5 @@
 const { bindPair, fetchCurrentPair, fetchMe, respondPairRequest, unbindPair } = require('../../services/api');
 const { COPY, formatApiError, mapBindErrorMessage } = require('../../utils/copywriting');
-const { requireLogin } = require('../../utils/auth-gate');
 const { canForceUnbind, pairRequestSub, pairRequestTitle } = require('../../utils/pair-request');
 const { createQrMatrix } = require('../../utils/qrcode');
 
@@ -51,9 +50,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin({ message: '请先登录后再结伴' })) {
-      return;
-    }
     this.loadPairData();
     this.updateNavigationState();
   },

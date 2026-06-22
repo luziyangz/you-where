@@ -46,14 +46,6 @@ Component({
       const url = data.path;
       const index = Number(data.index);
 
-      if (!isLoggedIn() && url !== HOME_TAB && url !== PROFILE_TAB) {
-        wx.showToast({
-          title: '请先登录后使用',
-          icon: 'none'
-        });
-        return;
-      }
-
       if (this.data.selected === index) {
         return;
       }

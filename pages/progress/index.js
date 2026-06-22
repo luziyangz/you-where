@@ -1,6 +1,5 @@
 const { createEntry, fetchBookEntries, fetchHome, markBookEntriesRead, replyEntry } = require('../../services/api');
 const { COPY, formatApiError } = require('../../utils/copywriting');
-const { requireLogin } = require('../../utils/auth-gate');
 const { openReportPage } = require('../../utils/report-nav');
 const { isSocialSharingEnabled } = require('../../utils/feature-flags');
 
@@ -62,9 +61,6 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin({ message: '请先登录后查看进度' })) {
-      return;
-    }
     if (app.globalData.openProgressComposer) {
       app.globalData.openProgressComposer = false;
       this.shouldOpenComposer = true;

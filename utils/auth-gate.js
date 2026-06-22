@@ -12,6 +12,8 @@ const TAB_ROUTES = new Set([
 
 const PUBLIC_ROUTES = new Set([
   HOME_ROUTE,
+  'pages/reading-history/index',
+  'pages/progress/index',
   'pages/profile/index',
   'pages/privacy-policy/index',
   'pages/user-agreement/index',
@@ -45,17 +47,6 @@ const requireLogin = (options = {}) => {
       title: options.message,
       icon: 'none'
     });
-  }
-
-  const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
-  const route = pages.length ? pages[pages.length - 1].route : '';
-  if (route === HOME_ROUTE) {
-    return false;
-  }
-  if (TAB_ROUTES.has(route)) {
-    wx.switchTab({ url: HOME_PATH });
-  } else {
-    wx.reLaunch({ url: HOME_PATH });
   }
   return false;
 };

@@ -1,6 +1,5 @@
 const { fetchReadingHistory } = require('../../services/api');
 const { formatApiError } = require('../../utils/copywriting');
-const { requireLogin } = require('../../utils/auth-gate');
 
 const app = getApp();
 
@@ -14,7 +13,13 @@ Page({
   },
 
   onShow() {
-    if (!requireLogin({ message: '请先登录后查看历史' })) {
+    if (!app.globalData.token || !app.globalData.user) {
+      this.setData({
+        loading: false,
+        items: [],
+        page: 1,
+        hasMore: false
+      });
       return;
     }
     this.loadHistory(true);
@@ -45,6 +50,9 @@ Page({
   },
 
   onReachBottom() {
+    if (!app.globalData.token || !app.globalData.user) {
+      return;
+    }
     this.loadHistory(false);
   },
 
