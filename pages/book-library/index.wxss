@@ -1,35 +1,41 @@
 .library-page {
   min-height: 100vh;
-  padding: 28rpx 28rpx 180rpx;
+  padding: 30rpx 28rpx 180rpx;
   box-sizing: border-box;
   background: #fbf6ec;
   color: #2f2a24;
 }
 
-.library-head {
+.library-hero {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20rpx;
-  margin-bottom: 26rpx;
+  gap: 22rpx;
+  margin-bottom: 24rpx;
 }
 
 .eyebrow {
-  font-size: 24rpx;
-  color: #8f7f6e;
-  margin-bottom: 8rpx;
+  display: inline-flex;
+  padding: 8rpx 18rpx;
+  border-radius: 999rpx;
+  background: #fffaf2;
+  color: #9f5838;
+  font-size: 23rpx;
+  font-weight: 700;
 }
 
 .page-title {
-  font-size: 44rpx;
-  font-weight: 700;
+  margin-top: 16rpx;
+  font-size: 46rpx;
+  line-height: 1.15;
+  font-weight: 900;
 }
 
 .page-desc {
   margin-top: 12rpx;
   max-width: 520rpx;
   font-size: 26rpx;
-  line-height: 1.6;
+  line-height: 1.55;
   color: #7b7064;
 }
 
@@ -48,8 +54,35 @@
 
 .manual-btn::after,
 .empty-btn::after,
-.add-btn::after {
+.add-btn::after,
+.detail-btn::after {
   border: 0;
+}
+
+.shelf-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10rpx;
+  padding: 8rpx;
+  border-radius: 24rpx;
+  background: #efe5d5;
+  margin-bottom: 20rpx;
+}
+
+.shelf-tab {
+  height: 66rpx;
+  line-height: 66rpx;
+  border-radius: 18rpx;
+  text-align: center;
+  color: #776c60;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.shelf-tab.active {
+  background: #fffaf2;
+  color: #2f2a24;
+  box-shadow: 0 8rpx 24rpx rgba(64, 43, 25, 0.08);
 }
 
 .search-box {
@@ -110,9 +143,9 @@
 }
 
 .cover {
-  width: 92rpx;
-  height: 124rpx;
-  flex: 0 0 92rpx;
+  width: 96rpx;
+  height: 132rpx;
+  flex: 0 0 96rpx;
   border-radius: 12rpx;
   background: #d8c4a7;
 }
@@ -123,7 +156,7 @@
   justify-content: center;
   color: #fff;
   font-size: 38rpx;
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .book-main {
@@ -133,7 +166,7 @@
 
 .book-title {
   font-size: 30rpx;
-  font-weight: 700;
+  font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -156,6 +189,12 @@
   overflow: hidden;
 }
 
+.recommend {
+  color: #2f7d62;
+  font-weight: 800;
+  margin-right: 10rpx;
+}
+
 .add-btn {
   width: 104rpx;
   height: 64rpx;
@@ -167,6 +206,21 @@
   padding: 0;
 }
 
+.progress-line {
+  margin-top: 12rpx;
+  width: 100%;
+  height: 10rpx;
+  border-radius: 999rpx;
+  overflow: hidden;
+  background: #eadfce;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #2f7d62;
+}
+
 .empty-state {
   margin-top: 120rpx;
   text-align: center;
@@ -175,7 +229,7 @@
 
 .empty-title {
   font-size: 32rpx;
-  font-weight: 700;
+  font-weight: 800;
   color: #2f2a24;
 }
 
@@ -215,4 +269,115 @@
 
 .sk-line.short {
   width: 48%;
+}
+
+.detail-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(39, 34, 28, 0.42);
+}
+
+.detail-sheet {
+  width: 100%;
+  padding: 28rpx;
+  border-radius: 32rpx 32rpx 0 0;
+  background: #fffaf2;
+  box-sizing: border-box;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.detail-title {
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.detail-close {
+  width: 56rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  text-align: center;
+  border-radius: 50%;
+  color: #8a7d6e;
+  background: #f0e6d6;
+}
+
+.detail-body {
+  display: flex;
+  gap: 24rpx;
+}
+
+.detail-cover {
+  width: 140rpx;
+  height: 188rpx;
+  flex: 0 0 140rpx;
+  border-radius: 16rpx;
+  background: #d8c4a7;
+}
+
+.detail-cover-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 52rpx;
+  font-weight: 900;
+}
+
+.detail-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-book-title {
+  font-size: 34rpx;
+  font-weight: 900;
+}
+
+.detail-meta {
+  margin-top: 10rpx;
+  color: #7b7064;
+  font-size: 25rpx;
+}
+
+.detail-desc {
+  margin-top: 18rpx;
+  color: #6e6255;
+  font-size: 26rpx;
+  line-height: 1.55;
+}
+
+.detail-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16rpx;
+  margin-top: 30rpx;
+}
+
+.detail-btn {
+  height: 78rpx;
+  line-height: 78rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+}
+
+.detail-btn.ghost {
+  background: #f0e6d6;
+  color: #6e6255;
+}
+
+.detail-btn.primary {
+  background: #2f7d62;
+  color: #fff;
 }
