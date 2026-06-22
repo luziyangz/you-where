@@ -11,7 +11,7 @@
     <view class="empty-title">还没有阅读历史</view>
     <view class="empty-desc">绑定伙伴并开启第一本书后，共读足迹会出现在这里。</view>
     <view class="empty-actions">
-      <button class="btn-primary w-full" bindtap="onGoHomeAddBook">回首页手动添加</button>
+      <button class="btn-primary w-full" bindtap="onGoHomeAddBook">回首页添加</button>
     </view>
   </view>
 

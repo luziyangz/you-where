@@ -274,7 +274,7 @@ Page({
     const account = (this.data.reviewAccount || '').trim();
     const password = this.data.reviewPassword || '';
     if (!account || !password) {
-      wx.showToast({ title: '请输入审核账号和密码', icon: 'none' });
+      wx.showToast({ title: '请输入账号和密码', icon: 'none' });
       return;
     }
 
@@ -289,7 +289,7 @@ Page({
       });
     } catch (error) {
       wx.showToast({
-        title: formatApiError(error, '审核登录失败'),
+        title: formatApiError(error, '登录失败'),
         icon: 'none'
       });
     } finally {
@@ -317,10 +317,10 @@ Page({
 
   onPreviewManualRecord() {
     wx.showModal({
-      title: '可用功能',
-      content: '可手动添加书名、作者和总页数，登录后保存页码进度、读完状态和阅读备注。当前版本仅提供阅读进度管理能力。',
+      title: '记录方式',
+      content: '添加书名、作者和页数后，可保存页码、状态和备注。',
       showCancel: false,
-      confirmText: '知道了'
+      confirmText: '我知道了'
     });
   },
 

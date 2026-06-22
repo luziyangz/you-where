@@ -179,7 +179,7 @@ Page({
     const account = (this.data.reviewAccount || '').trim();
     const password = this.data.reviewPassword || '';
     if (!account || !password) {
-      wx.showToast({ title: '请输入审核账号和密码', icon: 'none' });
+      wx.showToast({ title: '请输入账号和密码', icon: 'none' });
       return;
     }
 
@@ -194,7 +194,7 @@ Page({
       });
     } catch (error) {
       wx.showToast({
-        title: formatApiError(error, '审核登录失败'),
+        title: formatApiError(error, '登录失败'),
         icon: 'none'
       });
     } finally {

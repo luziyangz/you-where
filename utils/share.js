@@ -19,7 +19,7 @@ const buildAppShare = (overrides = {}) => ({
 });
 
 const buildHomeShare = () => buildAppShare({
-  title: '邀请你一起记录阅读进度',
+  title: '一起记录读到哪一页',
   path: DEFAULT_SHARE_PATH
 });
 

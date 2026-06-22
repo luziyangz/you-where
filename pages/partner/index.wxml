@@ -147,7 +147,7 @@
       <block wx:else>
         <view class="next-label">下一步</view>
         <view class="next-title">还没有共同开始一本书</view>
-        <view class="next-desc">回首页手动添加正在读的书名、作者和总页数。</view>
+        <view class="next-desc">回首页添加正在读的书名、作者和总页数。</view>
         <button class="btn-primary w-full" bindtap="onGoHomeAddBook">回首页添加</button>
       </block>
       <button class="btn-secondary w-full" bindtap="onGoHome">回到共读首页</button>

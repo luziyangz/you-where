@@ -44,7 +44,7 @@
           class="btn-review-login w-full"
           disabled="{{!canProceedLogin || reviewLoginLoading}}"
           bindtap="onOpenReviewLogin"
-        >审核测试登录</button>
+        >测试账号登录</button>
       </view>
     </view>
   </block>
@@ -202,14 +202,14 @@
 
   <view class="nickname-editor-mask" wx:if="{{showReviewLoginPanel}}" bindtap="onCloseReviewLogin">
     <view class="nickname-editor review-login-modal" catchtap="noop">
-      <view class="nickname-editor-title">审核测试登录</view>
-      <view class="review-login-desc">仅供微信审核使用，正式版不会显示此入口。</view>
+      <view class="nickname-editor-title">测试账号登录</view>
+      <view class="review-login-desc">用于演示账号体验，正式版不会显示此入口。</view>
       <input
         class="nickname-editor-input"
         value="{{reviewAccount}}"
         maxlength="64"
         bindinput="onReviewAccountInput"
-        placeholder="审核账号"
+        placeholder="账号"
       />
       <input
         class="nickname-editor-input"
@@ -217,7 +217,7 @@
         value="{{reviewPassword}}"
         maxlength="128"
         bindinput="onReviewPasswordInput"
-        placeholder="审核密码"
+        placeholder="密码"
       />
       <view class="nickname-editor-actions">
         <button class="nickname-editor-cancel" bindtap="onCloseReviewLogin">取消</button>
