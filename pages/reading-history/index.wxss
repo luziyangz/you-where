@@ -1,29 +1,177 @@
-.page {
-  padding: 24rpx;
+.asset-subpage {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 48rpx 34rpx calc(48rpx + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 84% 6%, rgba(92, 143, 117, 0.14), transparent 220rpx),
+    linear-gradient(180deg, #fbf6ec 0%, #f3eadb 100%);
 }
 
-.item {
-  padding: 24rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  margin-bottom: 16rpx;
+.subpage-head {
+  margin-bottom: 32rpx;
 }
 
-.title {
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #222;
+.subpage-eyebrow {
+  display: inline-flex;
+  padding: 8rpx 18rpx;
+  border: 1rpx solid rgba(184, 92, 56, 0.24);
+  border-radius: 999rpx;
+  background: rgba(255, 251, 243, 0.72);
+  color: #a54f33;
+  font-size: 22rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
 }
 
-.meta {
-  margin-top: 8rpx;
-  font-size: 24rpx;
-  color: #666;
+.subpage-title {
+  margin-top: 22rpx;
+  color: #2d2822;
+  font-size: 44rpx;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
-.empty,
-.more {
+.subpage-desc {
+  margin-top: 16rpx;
+  color: #7c7164;
+  font-size: 27rpx;
+  line-height: 1.65;
+}
+
+.state-text {
   text-align: center;
-  color: #999;
-  padding: 40rpx 0;
+  color: #9a8e7e;
+  font-size: 28rpx;
+  padding: 80rpx 0;
+}
+
+.empty-panel {
+  margin-top: 24rpx;
+  padding: 48rpx 36rpx 44rpx;
+  border: 1rpx solid rgba(120, 98, 72, 0.14);
+  border-radius: 40rpx;
+  background: var(--paper-card, #fffbf3);
+  box-shadow: 0 18rpx 46rpx rgba(69, 47, 26, 0.06);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #2d2822;
+}
+
+.empty-desc {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  color: #7c7164;
+  line-height: 1.6;
+}
+
+.empty-actions {
+  margin-top: 40rpx;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.history-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 28rpx 30rpx;
+  border: 1rpx solid rgba(120, 98, 72, 0.14);
+  border-radius: 36rpx;
+  background: var(--paper-card, #fffbf3);
+  box-shadow: 0 14rpx 36rpx rgba(69, 47, 26, 0.05);
+  box-sizing: border-box;
+}
+
+.history-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.history-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #2d2822;
+  line-height: 1.35;
+}
+
+.history-meta {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #9a8e7e;
+  line-height: 1.45;
+}
+
+.history-side {
+  flex-shrink: 0;
+  padding-top: 4rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12rpx;
+}
+
+.history-card--active {
+  opacity: 0.88;
+}
+
+/* 暗示可点击进入详情 */
+.history-chevron {
+  width: 14rpx;
+  height: 14rpx;
+  border-right: 3rpx solid rgba(154, 142, 126, 0.55);
+  border-bottom: 3rpx solid rgba(154, 142, 126, 0.55);
+  transform: rotate(-45deg);
+  margin-top: 4rpx;
+}
+
+.status-pill {
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #4f7b65;
+  background: rgba(92, 143, 117, 0.12);
+  border: 1rpx solid rgba(92, 143, 117, 0.22);
+}
+
+/* 真读完 */
+.status-pill--finished {
+  color: #a54f33;
+  background: rgba(184, 92, 56, 0.1);
+  border-color: rgba(184, 92, 56, 0.22);
+}
+
+/* 仍在共读 / 未读完 */
+.status-pill--unfinished {
+  color: #4f7b65;
+  background: rgba(92, 143, 117, 0.12);
+  border-color: rgba(92, 143, 117, 0.22);
+}
+
+/* 中途换书搁置 */
+.status-pill--switched {
+  color: #7c7164;
+  background: rgba(120, 98, 72, 0.1);
+  border-color: rgba(120, 98, 72, 0.22);
+}
+
+.list-foot {
+  text-align: center;
+  font-size: 24rpx;
+  color: #b5a896;
+  padding: 36rpx 0 8rpx;
+}
+
+.list-foot--end {
+  color: #c4b8a8;
 }

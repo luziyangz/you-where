@@ -4,6 +4,7 @@ param(
   [int]$Port = 22,
   [string]$KeyPath = "",
   [string]$RemoteDir = "/opt/you-where-backend",
+  [string]$ServerDomain = "www.nizaina.online",
   [switch]$SkipDeploy
 )
 
@@ -40,7 +41,8 @@ $tarArgs = @(
   "--exclude=.deploy",
   "--exclude=__pycache__",
   "--exclude=.pytest_cache",
-  "--exclude=data",
+  "--exclude=data/*.db",
+  "--exclude=data/*.sqlite3",
   "--exclude=nginx/logs",
   "-C", $backendDir,
   "."
@@ -59,10 +61,10 @@ Write-Host "[sync] Uploading package to ${target}:/tmp/you-where-backend.tar.gz"
 
 $remoteCommand = "set -eu; sudo mkdir -p '$RemoteDir'; sudo tar -xzf /tmp/you-where-backend.tar.gz -C '$RemoteDir'; cd '$RemoteDir'"
 if (-not $SkipDeploy) {
-  $remoteCommand += "; sudo sh scripts/cloud_deploy.sh"
+  $remoteCommand += "; sudo env SERVER_IP='$Server' SERVER_DOMAIN='$ServerDomain' sh scripts/cloud_deploy.sh"
 }
 
 Write-Host "[sync] Running remote deploy command"
 & ssh @sshArgs $target $remoteCommand
 
-Write-Host "[sync] Finished. Health URL: http://${Server}:18080/health"
+Write-Host "[sync] Finished. Health URL: https://${ServerDomain}/health"

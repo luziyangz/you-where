@@ -37,7 +37,26 @@ else:
 PY
 
   echo "[entrypoint] applying schema"
-  python scripts/apply_schema_updates.py
+  python scripts/apply_schema_updates.py || {
+    echo "[entrypoint] WARN: schema sync failed; check DB credentials and logs" >&2
+    exit 1
+  }
+
+  echo "[entrypoint] seeding store catalog metadata"
+  python scripts/seed_store_books.py
+
+  if [ "${STORE_ENABLE_NETWORK:-0}" = "1" ]; then
+    mkdir -p /app/logs 2>/dev/null || true
+    echo "[entrypoint] scheduling Gutendex zh catalog sync in background"
+    nohup python scripts/sync_gutendex_zh_catalog.py --max-pages "${GUTENDEX_ZH_SYNC_MAX_PAGES:-30}" >>/app/logs/gutendex_zh_sync.log 2>&1 &
+  fi
+
+  # 正文预取耗时长，必须在后台执行，否则会阻塞 uvicorn，导致 backend 不健康、nginx 无法启动
+  if [ "${STORE_PREFETCH_CONTENT:-1}" = "1" ]; then
+    mkdir -p /app/logs 2>/dev/null || true
+    echo "[entrypoint] scheduling public-domain prefetch in background (see /app/logs/catalog_prefetch.log)"
+    nohup python scripts/prefetch_catalog_contents.py >>/app/logs/catalog_prefetch.log 2>&1 &
+  fi
 
   if [ "${SEED_TEST_USERS:-0}" = "1" ]; then
     echo "[entrypoint] seeding hidden test users"

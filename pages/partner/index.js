@@ -1,6 +1,7 @@
-const { bindPair, fetchCurrentPair, fetchMe, unbindPair } = require('../../services/api');
+const { bindPair, fetchCurrentPair, fetchMe, respondPairRequest, unbindPair } = require('../../services/api');
 const { COPY, formatApiError, mapBindErrorMessage } = require('../../utils/copywriting');
 const { requireLogin } = require('../../utils/auth-gate');
+const { canForceUnbind, pairRequestSub, pairRequestTitle } = require('../../utils/pair-request');
 const { createQrMatrix } = require('../../utils/qrcode');
 
 const app = getApp();
@@ -35,11 +36,18 @@ Page({
     // 共同阅读统计
     sharedBooks: 0,
     sharedNotes: 0,
+    currentBook: null,
 
     // 我的绑定二维码
     myBindQrText: '',
     myBindQrReady: false,
-    myBindQrTempPath: ''
+    myBindQrTempPath: '',
+
+    pairRequests: [],
+    pairRequestIncoming: null,
+    pairRequestOutgoing: null,
+    pairRequestResponding: false,
+    canForceUnbind: false
   },
 
   onShow() {
@@ -78,6 +86,7 @@ Page({
         bindDays: 0,
         sharedBooks: 0,
         sharedNotes: 0,
+        currentBook: null,
         myBindQrText: '',
         myBindQrReady: false,
         myBindQrTempPath: ''
@@ -93,6 +102,9 @@ Page({
     try {
       const [res, me] = await Promise.all([fetchCurrentPair(), fetchMe()]);
       const pair = res.pair || null;
+      const pairRequests = res.pair_requests || [];
+      const pairRequestIncoming = pairRequests.find((r) => r.direction === 'incoming') || null;
+      const pairRequestOutgoing = pairRequests.find((r) => r.direction === 'outgoing') || null;
       const user = me || app.globalData.user || {};
       app.syncReadingContext({
         user,
@@ -107,11 +119,18 @@ Page({
           myNickname:      user.nickname  || '',
           myAvatar:        user.avatar    || '',
           myJoinCode,
-          partnerNickname: pair.partner.nickname || '书友',
+          partnerNickname: pair.partner.nickname || '对方',
           partnerAvatar:   pair.partner.avatar   || '',
           bindDays:        pair.bind_days         || 1,
           sharedBooks:     pair.shared_books      || 0,
           sharedNotes:     pair.shared_notes      || 0,
+          currentBook:      pair.current_book      || null,
+          pairRequests,
+          pairRequestIncoming,
+          pairRequestOutgoing,
+          pairRequestTitle: pairRequestIncoming ? pairRequestTitle(pairRequestIncoming) : (pairRequestOutgoing ? pairRequestTitle(pairRequestOutgoing) : ''),
+          pairRequestSub: pairRequestIncoming ? pairRequestSub(pairRequestIncoming) : (pairRequestOutgoing ? pairRequestSub(pairRequestOutgoing) : ''),
+          canForceUnbind: canForceUnbind(pair.bind_days),
           ...qrData
         });
         this.scheduleDrawMyQrCode(qrData.myBindQrText);
@@ -123,6 +142,13 @@ Page({
           myNickname:  user.nickname  || '',
           myAvatar:    user.avatar    || '',
           myJoinCode,
+          currentBook: null,
+          pairRequests,
+          pairRequestIncoming,
+          pairRequestOutgoing,
+          pairRequestTitle: pairRequestIncoming ? pairRequestTitle(pairRequestIncoming) : (pairRequestOutgoing ? pairRequestTitle(pairRequestOutgoing) : ''),
+          pairRequestSub: pairRequestIncoming ? pairRequestSub(pairRequestIncoming) : (pairRequestOutgoing ? pairRequestSub(pairRequestOutgoing) : ''),
+          canForceUnbind: false,
           ...qrData
         });
         this.scheduleDrawMyQrCode(qrData.myBindQrText);
@@ -226,21 +252,27 @@ Page({
 
     this.setData({ bindLoading: true });
     try {
-      await bindPair(joinCode);
+      const result = await bindPair(joinCode);
       await this.loadPairData();
+      if (result && result.mode === 'pair_request') {
+        wx.showToast({ title: '绑定申请已发送，等待对方同意', icon: 'none' });
+        this.setData({ inviteCode: '' });
+        this.updateNavigationState();
+        return;
+      }
       const user = app.globalData.user || {};
-
       this.setData({
-        inviteCode:      '',
-        hasPartner:      true,
-        myNickname:      user.nickname  || '',
-        myAvatar:        user.avatar    || '',
-        myJoinCode:      user.join_code || '',
-        partnerNickname: this.data.partnerNickname || '书友',
-        partnerAvatar:   this.data.partnerAvatar || '',
-        bindDays:        this.data.bindDays || 1,
-        sharedBooks:     this.data.sharedBooks || 0,
-        sharedNotes:     this.data.sharedNotes || 0
+        inviteCode: '',
+        hasPartner: true,
+        myNickname: user.nickname || '',
+        myAvatar: user.avatar || '',
+        myJoinCode: user.join_code || '',
+        partnerNickname: this.data.partnerNickname || '对方',
+        partnerAvatar: this.data.partnerAvatar || '',
+        bindDays: this.data.bindDays || 1,
+        sharedBooks: this.data.sharedBooks || 0,
+        sharedNotes: this.data.sharedNotes || 0,
+        currentBook: this.data.currentBook || null
       });
       wx.showToast({ title: '绑定成功', icon: 'success' });
       this.updateNavigationState();
@@ -374,7 +406,7 @@ Page({
     }, this);
   },
 
-  // 一键复制自己的共读码，方便分享给对方绑定
+  // 一键复制自己的共读码，方便对方完成绑定
   onCopyMyJoinCode() {
     const code = (this.data.myJoinCode || '').trim();
     if (!code) {
@@ -392,30 +424,29 @@ Page({
     });
   },
 
-  // 解除绑定
+  // 解除绑定（须对方同意；满 7 天可申请强制解除）
   unbindPartner() {
+    const forceHint = this.data.canForceUnbind
+      ? '\n\n若对方 7 天未处理，可使用「强制解除」，之后将无法再次绑定。'
+      : '';
     wx.showModal({
-      title:   '解除绑定',
-      content: '解除后不会删除历史共读记录，但你们将停止同步新的进度和笔记。确定解绑吗？',
+      title: '申请解除结伴',
+      content: `将向伙伴发送解绑申请，对方同意后立即生效。${forceHint}`,
+      confirmText: '发送申请',
       success: async (res) => {
-        if (!res.confirm) return;
-
+        if (!res.confirm) {
+          return;
+        }
         this.setData({ unbindLoading: true });
         try {
-          await unbindPair();
-          app.syncReadingContext({
-            pair: null,
-            currentBook: null
-          });
-          this.setData({
-            hasPartner:      false,
-            inviteCode:      '',
-            partnerNickname: '',
-            partnerAvatar:   '',
-            bindDays:        0,
-            sharedBooks:     0,
-            sharedNotes:     0
-          });
+          const result = await unbindPair();
+          if (result && result.mode === 'pair_request') {
+            await this.loadPairData();
+            wx.showToast({ title: '解绑申请已发送', icon: 'none' });
+            return;
+          }
+          app.syncReadingContext({ pair: null, currentBook: null });
+          await this.loadPairData();
           wx.showToast({ title: '已解除绑定', icon: 'success' });
           this.updateNavigationState();
         } catch (error) {
@@ -424,6 +455,90 @@ Page({
           this.setData({ unbindLoading: false });
         }
       }
+    });
+  },
+
+  onForceUnbindPartner() {
+    if (!this.data.canForceUnbind) {
+      wx.showToast({ title: '绑定满 7 天后才可强制解除', icon: 'none' });
+      return;
+    }
+    wx.showModal({
+      title: '强制解除结伴',
+      content: '强制解除后，你们将无法再次绑定。历史共读记录仍会保留。确定继续吗？',
+      confirmText: '强制解除',
+      confirmColor: '#b45309',
+      success: async (res) => {
+        if (!res.confirm) {
+          return;
+        }
+        this.setData({ unbindLoading: true });
+        try {
+          await unbindPair({ force: true });
+          app.syncReadingContext({ pair: null, currentBook: null });
+          await this.loadPairData();
+          wx.showToast({ title: '已强制解除', icon: 'success' });
+          this.updateNavigationState();
+        } catch (error) {
+          wx.showToast({ title: formatApiError(error, '强制解除失败'), icon: 'none' });
+        } finally {
+          this.setData({ unbindLoading: false });
+        }
+      }
+    });
+  },
+
+  async onApprovePairRequest() {
+    const req = this.data.pairRequestIncoming;
+    if (!req || !req.request_id || this.data.pairRequestResponding) {
+      return;
+    }
+    this.setData({ pairRequestResponding: true });
+    try {
+      await respondPairRequest(req.request_id, 'approve');
+      app.globalData.homeNeedsRefresh = true;
+      await this.loadPairData();
+      wx.showToast({ title: req.request_type === 'bind' ? '已同意绑定' : '已同意解绑', icon: 'success' });
+      this.updateNavigationState();
+    } catch (error) {
+      wx.showToast({ title: formatApiError(error, '操作失败'), icon: 'none' });
+    } finally {
+      this.setData({ pairRequestResponding: false });
+    }
+  },
+
+  async onRejectPairRequest() {
+    const req = this.data.pairRequestIncoming;
+    if (!req || !req.request_id || this.data.pairRequestResponding) {
+      return;
+    }
+    this.setData({ pairRequestResponding: true });
+    try {
+      await respondPairRequest(req.request_id, 'reject');
+      await this.loadPairData();
+      wx.showToast({ title: '已拒绝', icon: 'none' });
+    } catch (error) {
+      wx.showToast({ title: formatApiError(error, '操作失败'), icon: 'none' });
+    } finally {
+      this.setData({ pairRequestResponding: false });
+    }
+  },
+
+  onGoHome() {
+    wx.switchTab({
+      url: '/pages/home/index'
+    });
+  },
+
+  onGoBookstore() {
+    wx.switchTab({
+      url: '/pages/bookstore/index'
+    });
+  },
+
+  onGoProgress() {
+    wx.switchTab({
+      url: '/pages/progress/index'
     });
   }
 });

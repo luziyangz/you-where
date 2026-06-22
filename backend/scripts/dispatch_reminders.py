@@ -27,15 +27,14 @@ import uuid
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from common.config import settings  # noqa: E402
 from common.db import SessionLocal, engine  # noqa: E402
-from common.models import Base, ReminderConfig, ReminderDeliveryLog, User  # noqa: E402
+from common.models import Base, ReminderConfig, User  # noqa: E402
+from service.reminder_delivery_service import get_delivery_log, record_delivery_log  # noqa: E402
 
 
 TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token"
@@ -103,37 +102,8 @@ def _due_delivery_date(config: ReminderConfig, now_utc: datetime) -> Optional[st
     return local_now.date().isoformat()
 
 
-def _delivery_log(db, user_id: str, delivery_date: str) -> Optional[ReminderDeliveryLog]:
-    return db.execute(
-        select(ReminderDeliveryLog).where(
-            ReminderDeliveryLog.user_id == user_id,
-            ReminderDeliveryLog.delivery_date == delivery_date,
-        )
-    ).scalar_one_or_none()
-
-
 def _record_delivery(db, user_id: str, delivery_date: str, status: str, error_message: str = "") -> None:
-    row = _delivery_log(db, user_id, delivery_date)
-    now = _utc_now()
-    if row:
-        row.status = status
-        row.error_message = error_message[:1000]
-        row.created_at = now
-    else:
-        db.add(
-            ReminderDeliveryLog(
-                delivery_id=f"rd_{uuid.uuid4().hex}",
-                user_id=user_id,
-                delivery_date=delivery_date,
-                status=status,
-                error_message=error_message[:1000],
-                created_at=now,
-            )
-        )
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
+    record_delivery_log(db, user_id, delivery_date, status, error_message=error_message)
 
 
 def _send_reminder(access_token: str, user: User, config: ReminderConfig) -> None:
@@ -194,7 +164,7 @@ def main() -> int:
                 skipped += 1
                 continue
 
-            existing = _delivery_log(db, user.user_id, delivery_date)
+            existing = get_delivery_log(db, user.user_id, delivery_date)
             if existing and existing.status == "success":
                 skipped += 1
                 continue

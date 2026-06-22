@@ -127,7 +127,7 @@ def test_profile_me_and_stats(client, seeded_token):
     stats_resp = client.get("/api/v2/users/me/stats", headers=_auth(seeded_token))
     assert stats_resp.status_code == 200
     stats = stats_resp.json()["data"]
-    assert stats["total_books"] == 1
+    assert stats["total_books"] == 0
     assert stats["total_entries"] == 1
     assert stats["total_pages"] >= 120
 
@@ -142,7 +142,7 @@ def test_profile_stats_keep_history_after_unbind(client, seeded_token):
     stats_resp = client.get("/api/v2/users/me/stats", headers=_auth(seeded_token))
     assert stats_resp.status_code == 200
     stats = stats_resp.json()["data"]
-    assert stats["total_books"] == 1
+    assert stats["total_books"] == 0
     assert stats["total_entries"] == 1
     assert stats["total_pages"] >= 120
 
@@ -153,7 +153,7 @@ def test_goal_and_reminder_crud(client, seeded_token, monkeypatch):
     default_goal = client.get("/api/v2/users/me/reading-goal", headers=_auth(seeded_token))
     assert default_goal.status_code == 200
     assert default_goal.json()["data"]["goal"]["period_days"] == 30
-    assert default_goal.json()["data"]["progress"]["completed_books"] == 1
+    assert default_goal.json()["data"]["progress"]["completed_books"] == 0
     assert default_goal.json()["data"]["progress"]["active_days"] == 1
 
     save_goal = client.put(
@@ -228,4 +228,36 @@ def test_history_pagination(client, seeded_token):
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert len(data["items"]) == 1
-    assert data["items"][0]["book_id"] == "b_1"
+    item = data["items"][0]
+    assert item["book_id"] == "b_1"
+    # 种子数据 status=finished 但仅读到 120/200，应展示为中途搁置而非已读完
+    assert item["display_status"] == "switched"
+    assert item["display_label"] == "已切换"
+
+
+def test_reader_options_crud(client, seeded_token):
+    first = client.get("/api/v2/users/me/reader-options", headers=_auth(seeded_token))
+    assert first.status_code == 200
+    ro0 = first.json()["data"]["reader_options"]
+    assert ro0["font_size"] == 32
+    assert ro0["reading_mode"] == "paper"
+
+    saved = client.put(
+        "/api/v2/users/me/reader-options",
+        json={"font_size": 36, "reading_mode": "night", "brightness": 70},
+        headers=_auth(seeded_token),
+    )
+    assert saved.status_code == 200
+    ro1 = saved.json()["data"]["reader_options"]
+    assert ro1["font_size"] == 36
+    assert ro1["reading_mode"] == "night"
+    assert ro1["brightness"] == 70
+
+    second = client.get("/api/v2/users/me/reader-options", headers=_auth(seeded_token))
+    assert second.status_code == 200
+    ro2 = second.json()["data"]["reader_options"]
+    assert ro2 == ro1
+
+    noop = client.put("/api/v2/users/me/reader-options", json={}, headers=_auth(seeded_token))
+    assert noop.status_code == 200
+    assert noop.json()["data"]["reader_options"] == ro2

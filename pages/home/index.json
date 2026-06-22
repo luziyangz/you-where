@@ -1,6 +1,9 @@
 {
-  "navigationBarTitleText": "你在哪页",
-  "navigationBarBackgroundColor": "#F8F9FC",
+  "navigationBarTitleText": "共读",
+  "navigationBarBackgroundColor": "#fbf6ec",
   "navigationBarTextStyle": "black",
-  "backgroundColor": "#F8F9FC"
+  "backgroundColor": "#fbf6ec",
+  "usingComponents": {
+    "login-consent-panel": "/components/login-consent-panel/index"
+  }
 }

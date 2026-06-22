@@ -22,16 +22,27 @@ class PairCreatePayload(BaseModel):
     join_code: str = Field(min_length=6, max_length=6)
 
 
+class PairRequestRespondPayload(BaseModel):
+    action: str = Field(min_length=4, max_length=16)
+
+
 class BookCreatePayload(BaseModel):
     catalog_id: Optional[str] = Field(default=None, min_length=1, max_length=64)
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
     author: str = Field(default="", max_length=200)
     total_pages: Optional[int] = Field(default=None, ge=1, le=50000)
+    # 已有在读书目时发起换书申请（须伙伴同意，不会立即切换）
+    replace_current: bool = False
+
+
+class BookSwitchRespondPayload(BaseModel):
+    action: str = Field(min_length=4, max_length=16)
 
 
 class BookEntryCreatePayload(BaseModel):
     page: int = Field(ge=1, le=50000)
     note_content: str = Field(default="", max_length=200)
+    quote_text: str = Field(default="", max_length=800)
     mark_finished: bool = False
     client_request_id: Optional[str] = None
 
@@ -42,6 +53,12 @@ class ReadMarkPayload(BaseModel):
 
 class ReplyPayload(BaseModel):
     content: str = Field(min_length=1, max_length=200)
+
+
+class ReaderOptionsPayload(BaseModel):
+    font_size: Optional[int] = Field(default=None, ge=28, le=42)
+    reading_mode: Optional[str] = Field(default=None, max_length=16)
+    brightness: Optional[int] = Field(default=None, ge=25, le=100)
 
 
 def _payload_dict(payload: BaseModel) -> Dict[str, Any]:
@@ -162,6 +179,35 @@ def put_current_user_reminder_config_resource(
     )
 
 
+@router.get("/users/me/reader-options")
+def get_current_user_reader_options_resource(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    return ok(reading_service.get_reader_options(db, current_user["user_id"]), request_id=request_id)
+
+
+@router.put("/users/me/reader-options")
+def put_current_user_reader_options_resource(
+    payload: ReaderOptionsPayload,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    body = _payload_dict(payload)
+    return ok(
+        reading_service.put_reader_options(
+            db,
+            current_user["user_id"],
+            font_size=body.get("font_size"),
+            reading_mode=body.get("reading_mode"),
+            brightness=body.get("brightness"),
+        ),
+        request_id=request_id,
+    )
+
+
 @router.get("/pairs/current")
 def get_current_pair_resource(
     current_user: Dict[str, Any] = Depends(get_current_user),
@@ -183,11 +229,29 @@ def create_pair_resource(
 
 @router.delete("/pairs/current")
 def delete_current_pair_resource(
+    force: bool = Query(default=False),
     current_user: Dict[str, Any] = Depends(get_current_user),
     request_id: str = Depends(get_request_id),
     db: Session = Depends(get_db_session),
 ):
-    return ok(reading_service.delete_current_pair(db, current_user), request_id=request_id)
+    return ok(
+        reading_service.delete_current_pair(db, current_user, force=force),
+        request_id=request_id,
+    )
+
+
+@router.post("/pairs/requests/{request_id}/respond")
+def respond_pair_request_resource(
+    request_id: str,
+    payload: PairRequestRespondPayload,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id_header: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    return ok(
+        reading_service.respond_pair_request(db, current_user, request_id, payload.action),
+        request_id=request_id_header,
+    )
 
 
 @router.get("/books")
@@ -207,7 +271,35 @@ def create_book_resource(
     request_id: str = Depends(get_request_id),
     db: Session = Depends(get_db_session),
 ):
-    return ok(reading_service.create_book(db, current_user, _payload_dict(payload)), request_id=request_id)
+    result = reading_service.create_book(db, current_user, _payload_dict(payload))
+    return ok(result, request_id=request_id)
+
+
+@router.post("/pairs/current/book-switch-requests")
+def create_book_switch_request_resource(
+    payload: BookCreatePayload,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    return ok(
+        reading_service.create_book_switch_request(db, current_user, _payload_dict(payload)),
+        request_id=request_id,
+    )
+
+
+@router.post("/pairs/current/book-switch-requests/{request_id}/respond")
+def respond_book_switch_request_resource(
+    request_id: str,
+    payload: BookSwitchRespondPayload,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    request_id_header: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    return ok(
+        reading_service.respond_book_switch_request(db, current_user, request_id, payload.action),
+        request_id=request_id_header,
+    )
 
 
 @router.get("/pairs/current/books/current")
@@ -248,6 +340,7 @@ def create_book_entry_resource(
             payload.note_content,
             payload.mark_finished,
             payload.client_request_id,
+            payload.quote_text,
         ),
         request_id=request_id,
     )

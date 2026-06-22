@@ -1,14 +1,39 @@
-<view class="page">
-  <view class="card">
-    <view class="row">
-      <text class="label">开启提醒</text>
-      <switch checked="{{enabled}}" bindchange="onToggleEnabled" color="#07c160" />
-    </view>
-    <view class="label">提醒时间（HH:MM）</view>
-    <input class="input" value="{{remind_time}}" bindinput="onInputTime" />
-    <view class="label">时区</view>
-    <input class="input" value="{{timezone}}" bindinput="onInputTimezone" />
-    <view class="status-tip" wx:if="{{deliveryMessage}}">{{deliveryMessage}}</view>
-    <button class="btn" loading="{{saving}}" bindtap="onSave">保存提醒</button>
+<view class="asset-subpage">
+  <view class="subpage-head">
+    <view class="subpage-eyebrow">温柔提醒</view>
+    <view class="subpage-title">到点轻推一下</view>
+    <view class="subpage-desc">保存时间与地区后，我们会在约定时刻温和提醒你们翻开书。</view>
   </view>
+
+  <view wx:if="{{loading}}" class="state-text">正在加载...</view>
+
+  <block wx:else>
+    <view class="subpage-card">
+      <view class="cell-row cell-row--noborder">
+        <text class="cell-label">开启提醒</text>
+        <switch checked="{{enabled}}" bindchange="onToggleEnabled" color="#5c8f75" />
+      </view>
+    </view>
+
+    <view class="subpage-card">
+      <view class="form-field">
+        <text class="form-label">提醒时间</text>
+        <text class="form-hint">24 小时制，例如 21:00</text>
+        <input class="form-input" placeholder="HH:MM" value="{{remind_time}}" bindinput="onInputTime" />
+      </view>
+      <view class="form-field">
+        <text class="form-label">时区</text>
+        <text class="form-hint">一般保持默认即可</text>
+        <input class="form-input" placeholder="Asia/Shanghai" value="{{timezone}}" bindinput="onInputTimezone" />
+      </view>
+    </view>
+
+    <view class="subpage-card subpage-card--muted" wx:if="{{deliveryMessage}}">
+      <text class="status-tip">{{deliveryMessage}}</text>
+    </view>
+
+    <view class="subpage-actions">
+      <button class="btn-primary w-full" loading="{{saving}}" bindtap="onSave">保存提醒</button>
+    </view>
+  </block>
 </view>

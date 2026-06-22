@@ -1,9 +1,11 @@
 fastapi==0.115.12
+python-multipart>=0.0.9
 uvicorn[standard]==0.34.0
 sqlalchemy>=2.0.0
 pymysql>=1.1.0
 python-dotenv>=1.0.1
 cryptography>=42.0.0
+opencc-python-reimplemented>=0.1.7
 
 # 测试依赖
 pytest>=8.0.0

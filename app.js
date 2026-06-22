@@ -1,9 +1,11 @@
-const { clearSession, login, phoneLogin, restoreSession } = require('./utils/auth');
+const { clearSession, login, reviewLogin, restoreSession } = require('./utils/auth');
 const { acceptAgreement } = require('./services/api');
+const { installPrivacyAuthorizationHost } = require('./utils/privacyAuthorization');
+const { enforceLoginForAppShow, installNavigationGuard } = require('./utils/auth-gate');
 
 const API_BASE_URL_BY_ENV = {
-  // 开发版临时使用阿里云公网 IP + 端口联调；正式上线必须切回备案域名 + HTTPS。
-  develop: 'http://47.99.240.126:18080/api/v2',
+  // 统一 API 子域 + HTTPS；本地若需直连 IP 可在调试时使用 apiBaseUrlOverride
+  develop: 'https://www.nizaina.online/api/v2',
   trial: 'https://www.nizaina.online/api/v2',
   release: 'https://www.nizaina.online/api/v2'
 };
@@ -61,11 +63,22 @@ App({
     const session = restoreSession();
     this.globalData.token = session.token;
     this.globalData.user = session.user;
+
+    // 未登录时禁止进入业务页，作为所有页面跳转的兜底保护。
+    installNavigationGuard();
+
+    // 全局监听隐私接口 pending：跳转统一页完成 resolve（须调用 resolve，不可空注册）
+    installPrivacyAuthorizationHost();
+  },
+
+  onShow() {
+    // 未登录仅允许首页与协议类页面，其余场景统一回登录入口
+    enforceLoginForAppShow();
   },
 
   globalData: {
     // 启动时会被 onLaunch 动态覆盖为当前环境对应地址
-    apiBaseUrl: 'http://47.99.240.126:18080/api/v2',
+    apiBaseUrl: 'https://www.nizaina.online/api/v2',
     // 当前小程序环境（develop / trial / release）
     apiEnvVersion: 'develop',
     // API 地址来源（环境映射或本地覆盖）
@@ -77,8 +90,20 @@ App({
     // 当前共读关系与当前书籍
     pair: null,
     currentBook: null,
+    // 从 Tab 中央按钮进入日记页时，用于跨 tab 打开记录弹窗
+    openProgressComposer: false,
+    // 从阅读器带入的引用原文（跨 Tab 传递）
+    pendingEntryQuote: null,
+    // 书籍详情加入/切换共读后，首页需强制刷新当前书
+    homeNeedsRefresh: false,
     // 避免登录失效场景重复弹提示
-    authExpiredNotified: false
+    authExpiredNotified: false,
+    // 隐私授权兜底页与 wx.onNeedPrivacyAuthorization 共用
+    __privacyAuthResolve: null,
+    __privacyAuthReferrer: '',
+    __privacyAuthHandled: false,
+    /** 隐私授权完成后由业务页 onShow 继续（如 txt_import） */
+    __privacyResumeAction: ''
   },
 
   syncUser(user, options = {}) {
@@ -154,10 +179,23 @@ App({
   },
 
   // 执行登录，必要时补充协议确认
-  async loginFlow(options = {}) {
-    const sessionData = options.method === 'phone'
-      ? await phoneLogin({ phoneCode: options.phoneCode, debugPhoneNumber: options.debugPhoneNumber })
-      : await login();
+  async loginFlow() {
+    const sessionData = await login({ retryOnInvalidCode: true });
+    this.setSession(sessionData);
+
+    if (sessionData.need_agreement) {
+      await acceptAgreement();
+      this.syncUser({
+        ...sessionData.user,
+        agreement_accepted_at: new Date().toISOString()
+      }, { persist: true });
+    }
+
+    return this.globalData.user;
+  },
+
+  async reviewLoginFlow(account, password) {
+    const sessionData = await reviewLogin({ account, password });
     this.setSession(sessionData);
 
     if (sessionData.need_agreement) {
@@ -180,5 +218,10 @@ App({
       currentBook: null
     }, { persistUser: true });
     this.globalData.token = '';
+    try {
+      wx.reLaunch({ url: '/pages/home/index' });
+    } catch (e) {
+      // ignore
+    }
   }
 });

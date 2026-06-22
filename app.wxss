@@ -1,175 +1,250 @@
 /**
- * 全局样式文件 - 适配 ui_final.html 设计风格
- * 颜色规范：
- * --me: #07C160 (本人/绿色)
- * --partner: #FF9F4A (伙伴/橙色)
- * --lock: #E9ECF0 (锁定/灰色)
- * --bg: #F8F9FC (背景色)
+ * 全局视觉基线：温润纸感 + 东方书房 + 双人关系。
+ * 页面仍保留 --me / --partner，兼容已有结伴、进度等页面。
  */
 
 page {
-  background-color: #F7F8FA;
-  color: #333333;
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica,
-    Segoe UI, Arial, Roboto, 'PingFang SC', 'miui', 'Hiragino Sans GB', 'Microsoft Yahei',
-    sans-serif;
-  --me: #07C160;
-  --partner: #FF9F4A;
-  --lock: #E9ECF0;
-  --bg: #F7F8FA;
+  min-height: 100%;
+  background-color: #f6efe3;
+  color: #2d2822;
+  font-family: "Songti SC", "STSong", "FZShuSong-Z01", "PingFang SC", "Microsoft YaHei", serif;
+  --ink: #2d2822;
+  --muted: #7c7164;
+  --paper: #f6efe3;
+  --paper-card: #fffbf3;
+  --paper-soft: #fbf7ef;
+  --line: #e7dccb;
+  --me: #5c8f75;
+  --partner: #b85c38;
+  --brand-primary: #5c8f75;
+  --brand-warm: #b85c38;
+  --lock: #d9d0c2;
+  --bg: #f6efe3;
 }
 
-/* 通用容器样式 */
+/* 原生输入控件不使用宋体，避免字形偏高时被容器裁切 */
+input,
+textarea {
+  font-family: "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
+input {
+  box-sizing: border-box;
+}
+
+button {
+  font-family: inherit;
+  margin: 0;
+  padding: 0;
+  line-height: normal;
+}
+
+button::after {
+  border: none;
+}
+
 .container {
   padding: 30rpx;
   box-sizing: border-box;
 }
 
-/* 顶部导航栏样式适配 */
 .glass-nav {
-  background: rgba(248, 249, 252, 0.9);
-  backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
   z-index: 50;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 20rpx 40rpx;
-  border-bottom: 1rpx solid #F1F1F1;
+  border-bottom: 1rpx solid rgba(120, 98, 72, 0.12);
+  background: rgba(246, 239, 227, 0.9);
+  backdrop-filter: blur(10px);
 }
 
 .nav-title {
+  color: var(--ink);
   font-size: 34rpx;
-  font-weight: bold;
-  color: #1A1A1A;
+  font-weight: 900;
 }
 
-/* 卡片基础样式 */
 .card {
-  background: #FFFFFF;
-  border-radius: 40rpx;
-  padding: 40rpx;
   margin-bottom: 30rpx;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.02);
+  padding: 40rpx;
+  border: 1rpx solid rgba(120, 98, 72, 0.16);
+  border-radius: 40rpx;
+  background: var(--paper-card);
+  box-shadow: 0 18rpx 46rpx rgba(69, 47, 26, 0.07);
 }
 
-/* 按钮样式 */
-.btn-primary {
-  background: var(--me);
-  color: #FFFFFF;
-  border-radius: 32rpx;
-  font-weight: bold;
+.btn-primary,
+.btn-secondary {
   height: 100rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 16rpx 32rpx rgba(7, 193, 96, 0.2);
+  text-align: center;
+  border-radius: 32rpx;
+  font-size: 30rpx;
+  font-weight: 900;
+  letter-spacing: 1rpx;
+  line-height: 1;
+  padding: 0 28rpx;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #5c8f75, #477560);
+  color: #fff8ed;
+  box-shadow: 0 18rpx 34rpx rgba(92, 143, 117, 0.24);
 }
 
 .btn-secondary {
-  background: rgba(7, 193, 96, 0.1);
-  color: var(--me);
-  border-radius: 32rpx;
-  font-weight: bold;
-  height: 100rpx;
+  border: 1rpx solid rgba(92, 143, 117, 0.24);
+  background: rgba(255, 251, 243, 0.82);
+  color: #4f7b65;
+}
+
+.btn-review-login {
+  height: 88rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 1rpx dashed rgba(120, 98, 72, 0.26);
+  border-radius: 28rpx;
+  background: rgba(255, 251, 243, 0.54);
+  color: #7c7164;
+  font-size: 26rpx;
+  font-weight: 900;
 }
 
-/* 进度条通用样式 */
+.btn-primary[disabled],
+.btn-secondary[disabled],
+.btn-secondary.is-disabled,
+.btn-review-login[disabled] {
+  opacity: 0.45;
+  pointer-events: auto;
+}
+
 .progress-track {
   position: relative;
   height: 16rpx;
-  background: #E5E7EB;
-  border-radius: 8rpx;
   margin: 40rpx 0;
+  border-radius: 999rpx;
+  background: rgba(124, 113, 100, 0.14);
 }
 
-.progress-bar-me {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: var(--me);
-  border-radius: 8rpx;
-  transition: width 0.3s ease;
-}
-
+.progress-bar-me,
 .progress-bar-partner {
   position: absolute;
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--partner);
-  border-radius: 8rpx;
-  opacity: 0.5;
+  border-radius: 999rpx;
   transition: width 0.3s ease;
 }
 
-/* 弹窗遮罩层 */
+.progress-bar-me {
+  background: var(--me);
+}
+
+.progress-bar-partner {
+  background: var(--partner);
+  opacity: 0.72;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
   z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(45, 40, 34, 0.45);
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
-  background: #FFFFFF;
-  width: 640rpx;
-  border-radius: 64rpx;
-  overflow: hidden;
   position: relative;
+  width: 640rpx;
+  overflow: hidden;
+  border-radius: 52rpx;
+  background: var(--paper-card);
 }
 
 .modal-header-line {
-  height: 8rpx;
   width: 100%;
-  background: linear-gradient(to right, var(--me), #A7F3D0);
+  height: 8rpx;
+  background: linear-gradient(90deg, var(--me), #d8b27a, var(--partner));
 }
 
 .modal-padding {
-  padding: 60rpx;
+  padding: 54rpx;
 }
 
 .modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
+  justify-content: space-between;
   margin-bottom: 40rpx;
 }
 
 .modal-title {
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #333;
+  color: var(--ink);
+  font-size: 38rpx;
+  font-weight: 900;
 }
 
 .close-icon {
-  font-size: 40rpx;
-  color: #CCC;
+  padding: 8rpx;
+  color: #9a8e7e;
+  font-size: 42rpx;
   line-height: 1;
-  padding: 10rpx;
 }
 
-/* 辅助类 */
-.w-full { width: 100% !important; box-sizing: border-box; }
-.flex { display: flex; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.gap-2 { gap: 16rpx; }
-.gap-3 { gap: 24rpx; }
-.mb-2 { margin-bottom: 16rpx; }
-.mb-4 { margin-bottom: 32rpx; }
-.mb-6 { margin-bottom: 48rpx; }
-.mt-8 { margin-top: 64rpx; }
-.text-center { text-align: center; }
+.w-full {
+  width: 100% !important;
+  box-sizing: border-box;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.gap-2 {
+  gap: 16rpx;
+}
+
+.gap-3 {
+  gap: 24rpx;
+}
+
+.mb-2 {
+  margin-bottom: 16rpx;
+}
+
+.mb-4 {
+  margin-bottom: 32rpx;
+}
+
+.mb-6 {
+  margin-bottom: 48rpx;
+}
+
+.mt-8 {
+  margin-top: 64rpx;
+}
+
+.text-center {
+  text-align: center;
+}

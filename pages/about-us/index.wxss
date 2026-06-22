@@ -48,16 +48,44 @@
   gap: 16rpx;
 }
 
+.contact-email {
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+}
+
 .copy-btn {
-  padding: 8rpx 16rpx;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8rpx 20rpx;
+  line-height: 1.4;
   border-radius: 999rpx;
   background: #e0e7ff;
   color: #3730a3;
   font-size: 22rpx;
+  font-weight: 700;
+}
+
+.copy-btn::after {
+  border: none;
+}
+
+.copy-btn--hover {
+  opacity: 0.85;
 }
 
 .updated {
   margin-top: 16rpx;
   font-size: 22rpx;
   color: #9ca3af;
+}
+
+.report-entry {
+  margin-top: 20rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 999rpx;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 26rpx;
+  text-align: center;
 }

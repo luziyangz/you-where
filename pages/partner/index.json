@@ -1,6 +1,6 @@
 {
   "usingComponents": {},
-  "navigationBarTitleText": "结伴",
-  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTitleText": "结伴邀请",
+  "navigationBarBackgroundColor": "#fbf6ec",
   "navigationBarTextStyle": "black"
 }

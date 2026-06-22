@@ -1,5 +1,5 @@
 // 统一封装 wx.request，负责携带 token、统一处理后端响应结构
-const DEFAULT_BASE_URL = 'http://127.0.0.1:8000/api/v2';
+const DEFAULT_BASE_URL = 'https://www.nizaina.online/api/v2';
 
 const makeClientRequestId = () => {
   return `mini_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
@@ -77,14 +77,21 @@ const request = (options) => {
             return;
           }
 
+          const errMsg = String((err && err.errMsg) || '');
+          let message = '网络异常';
+          if (/timeout/i.test(errMsg)) {
+            message = '网络超时';
+          }
+
           const baseUrl = resolvedBaseUrl;
           const useLocalhostInRealDevice = isLocalhostBaseUrl(baseUrl) && !isDevtools();
-          const suggestion = useLocalhostInRealDevice
-            ? '（当前为 localhost/127.0.0.1，真机请改为电脑局域网 IP）'
-            : '';
+          if (useLocalhostInRealDevice) {
+            console.warn('[request] 真机无法访问 localhost/127.0.0.1，请改用电脑局域网 IP');
+          }
+
           reject({
             code: -1,
-            message: `网络异常，请检查 API 地址是否可达：${baseUrl}${suggestion}`,
+            message,
             detail: err
           });
         }

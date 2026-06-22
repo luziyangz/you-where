@@ -29,7 +29,7 @@ RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
 
 COPY . .
 
-RUN chmod +x /app/scripts/docker_entrypoint.sh \
+RUN chmod +x /app/scripts/docker_entrypoint.sh /app/scripts/apply_schema.sh \
     && useradd --create-home --shell /usr/sbin/nologin appuser \
     && chown -R appuser:appuser /app
 

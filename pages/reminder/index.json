@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "打卡提醒"
+  "navigationBarTitleText": "温柔提醒",
+  "navigationBarBackgroundColor": "#fbf6ec",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#fbf6ec"
 }

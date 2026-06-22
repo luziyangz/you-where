@@ -17,12 +17,13 @@
 
 | 页面 | 主要职责 | 使用的前端 API | 对应后端接口 | 当前判断 |
 | --- | --- | --- | --- | --- |
-| `pages/home/index` | 登录入口、首页工作台、当前共读概览、创建手动书、跳转伙伴/进度 | `fetchHome`、`createBook` | `/home`、`/books` | 初次进入必须先登录，支持微信一键登录和手机号登录 |
+| `pages/home/index` | 轻量共读状态、继续阅读、进入我们的记录 | `fetchHome`、`createBook` | `/home`、`/books` | v1.1 已瘦身：不再展示完整双人进度条 |
 | `pages/partner/index` | 共读伙伴信息、绑定/解绑、共读码、共读二维码、扫码绑定 | `fetchCurrentPair`、`fetchMe`、`bindPair`、`unbindPair` | `/pairs/current`、`/users/me`、`POST /pairs`、`DELETE /pairs/current` | 结伴主页面；复制码、二维码展示、扫码解析与绑定已接入 |
 | `pages/bookstore/index` | 书城列表与搜索 | `storeSearchBooks` | `/store/books` | 主链核心页；已修复分页偏移问题 |
 | `pages/book-detail/index` | 书籍详情、加入共读、跳转阅读器 | `storeGetBook`、`createBook` | `/store/books/{catalog_id}`、`/books` | 主链核心页 |
 | `pages/reader/index` | 分页阅读、同步阅读进度 | `storeReadPage`、`fetchHome`、`createEntry` | `/store/books/{catalog_id}/read`、`/home`、`POST /books/{book_id}/entries` | 主链核心页；同步前后会刷新上下文 |
-| `pages/progress/index` | 当前书进度、动态流、未读、回复、补记 | `fetchHome`、`fetchBookEntries`、`markBookEntriesRead`、`createEntry`、`replyEntry` | `/home`、`/books/{book_id}/entries`、`/books/{book_id}/read-mark`、`/entries/{entry_id}/replies` | 主链核心页；详细进度和笔记操作已收敛到本页 |
+| `pages/progress/index` | 情感时间线、未读、回复、补记、可选分享摘录 | `fetchHome`、`fetchBookEntries`、`markBookEntriesRead`、`createEntry`、`replyEntry`、`publishEntryToFeed` | `/home`、`/books/{book_id}/entries`、`/books/{book_id}/read-mark`、`/entries/{entry_id}/replies`、`POST /entries/{entry_id}/publish-to-feed` | v1.1 情感化 IA；进度条弱化 |
+| `pages/circle/index` | 书友书摘（只读探索）、我的分享、微信转发、分享链接预览 | `fetchExploreFeedPosts`、`fetchMyFeedPosts`、`fetchFeedPost`、`deleteFeedPost` | `GET /feed/posts/explore`、`GET /feed/posts/mine`、`GET /feed/posts/{id}`、`DELETE /feed/posts/{id}` | 二期：内容发现，非社交（无评论/点赞/关注） |
 | `pages/profile/index` | 个人资料、统计、昵称修改、阅读目标进度 | `fetchProfileMe`、`fetchProfileStats`、`fetchReadingGoal`、`updateMe` | `/users/me/profile`、`/users/me/stats`、`/users/me/reading-goal`、`/users/me` | 可用；旧 `/profile/*` 与 `/me` 路径已下线 |
 | `pages/reading-history/index` | 阅读历史分页 | `fetchReadingHistory` | `/users/me/reading-history` | 可用 |
 | `pages/reading-goal/index` | 阅读目标设置与周期进度 | `fetchReadingGoal`、`saveReadingGoal` | `/users/me/reading-goal` | 可用；已返回并展示目标完成度 |
@@ -73,7 +74,7 @@
 ### 明显缺口
 - 提醒已有模板配置、授权入口、调度脚本和投递日志，但真实闭环仍需生产模板字段、服务器计划任务和真机授权验证。
 - 阅读目标已有周期进度反馈，已接入个人页，尚未接入首页展示。
-- 分享链路还不完整，目前更偏“复制码/二维码”，不是完整的小程序分享闭环。
+- 分享摘录已支持：progress 发布 → circle「我的分享」微信转发 +「书友书摘」只读浏览（非社交）。
 - 小程序端已有最小状态脚本，但还不是完整 UI 自动化测试。
 - 接口仍未使用严格 REST 状态码，创建与删除类操作仍返回统一 `200 + code` 包装。
 

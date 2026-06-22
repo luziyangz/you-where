@@ -84,6 +84,34 @@ def get_current_user(
     return _to_user_dict(user_row)
 
 
+def get_optional_current_user(
+    authorization: Optional[str] = Header(default=None, alias="Authorization"),
+    db: Session = Depends(get_db_session),
+) -> Optional[Dict[str, Any]]:
+    """未登录返回 None；token 无效时也视为未登录（不打断书城浏览）。"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        return None
+
+    session_row = db.execute(select(SessionModel).where(SessionModel.token == token)).scalar_one_or_none()
+    if not session_row:
+        return None
+
+    try:
+        expires_at = datetime.fromisoformat((session_row.expires_at or "").replace("Z", "+00:00"))
+    except Exception:
+        expires_at = datetime.now(timezone.utc) - timedelta(days=1)
+    if expires_at <= datetime.now(timezone.utc):
+        return None
+
+    user_row = db.execute(select(User).where(User.user_id == session_row.user_id)).scalar_one_or_none()
+    if not user_row:
+        return None
+    return _to_user_dict(user_row)
+
+
 def get_active_pair(db: Session, user_id: str) -> Optional[Pair]:
     return db.execute(
         select(Pair).where(

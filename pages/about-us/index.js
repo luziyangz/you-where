@@ -1,4 +1,6 @@
 const { LEGAL_META, ABOUT_SECTIONS } = require("../../utils/legal-content");
+const { copyToClipboard } = require("../../utils/clipboard");
+const { openReportPage } = require("../../utils/report-nav");
 
 Page({
   data: {
@@ -7,11 +9,10 @@ Page({
   },
 
   onCopyEmail() {
-    wx.setClipboardData({
-      data: this.data.meta.contactEmail,
-      success: () => {
-        wx.showToast({ title: "邮箱已复制", icon: "none" });
-      },
-    });
+    copyToClipboard(this.data.meta.contactEmail, { toastTitle: "邮箱已复制" });
+  },
+
+  onTapReport() {
+    openReportPage({ targetType: "app", hint: "功能或服务投诉" });
   },
 });

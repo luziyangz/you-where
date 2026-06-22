@@ -27,6 +27,9 @@ class Settings:
     WECHAT_APP_ID: str = os.getenv("WECHAT_APP_ID", "")
     WECHAT_APP_SECRET: str = os.getenv("WECHAT_APP_SECRET", "")
     WECHAT_REMINDER_TEMPLATE_ID: str = os.getenv("WECHAT_REMINDER_TEMPLATE_ID", "")
+    ENABLE_REVIEW_LOGIN: bool = os.getenv("ENABLE_REVIEW_LOGIN", "0").strip().lower() in {"1", "true", "yes", "on"}
+    WECHAT_REVIEW_ACCOUNT: str = os.getenv("WECHAT_REVIEW_ACCOUNT", "reviewer").strip()
+    WECHAT_REVIEW_PASSWORD: str = os.getenv("WECHAT_REVIEW_PASSWORD", "").strip()
     ENABLE_TEST_USERS: bool = os.getenv(
         "ENABLE_TEST_USERS",
         "1" if os.getenv("DB_BACKEND", "mysql").strip().lower() == "sqlite" else "0",

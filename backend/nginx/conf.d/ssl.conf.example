@@ -1,20 +1,20 @@
-# 未备案域名在大陆服务器上通常不能作为生产访问入口；本文件默认不会被 Nginx 加载。
-# 如果后续域名完成备案并已在微信后台配置 request 合法域名，可将本文件复制为 ssl.conf 后启用。
+# 本文件默认不会被 Nginx 加载。
+# 当证书文件存在时，cloud_deploy.sh 会自动复制为 ssl.conf 并启用 HTTPS。
 #
 # 证书放置位置：
-#   backend/nginx/certs/www.nizaina.com.pem
-#   backend/nginx/certs/www.nizaina.com.key
+#   backend/nginx/certs/www.nizaina.online.pem
+#   backend/nginx/certs/www.nizaina.online.key
 #
 # 重要限制：
-# - 证书签给 www.nizaina.com，不能用于 https://47.99.240.126 这类 IP 访问，否则客户端会报证书域名不匹配。
+# - 证书签给 www.nizaina.online，不能用于 https://47.99.240.126 这类 IP 访问，否则客户端会报证书域名不匹配。
 
 server {
     listen 443 ssl;
     http2 on;
-    server_name www.nizaina.com;
+    server_name www.nizaina.online;
 
-    ssl_certificate /etc/nginx/certs/www.nizaina.com.pem;
-    ssl_certificate_key /etc/nginx/certs/www.nizaina.com.key;
+    ssl_certificate /etc/nginx/certs/www.nizaina.online.pem;
+    ssl_certificate_key /etc/nginx/certs/www.nizaina.online.key;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
     ssl_protocols TLSv1.2 TLSv1.3;
@@ -28,6 +28,11 @@ server {
         proxy_set_header X-Forwarded-Proto https;
     }
 
+    location = /nginx-health {
+        default_type text/plain;
+        return 200 "nginx ok\n";
+    }
+
     location /api/v2/ {
         proxy_pass http://you_where_backend/api/v2/;
         proxy_http_version 1.1;
@@ -36,5 +41,10 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
+    }
+
+    location / {
+        default_type text/plain;
+        return 200 "you-where backend gateway\nhealth: /health\napi: /api/v2\n";
     }
 }

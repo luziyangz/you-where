@@ -17,7 +17,7 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        count = seed_default_store_books(db, force=args.force)
+        count = seed_default_store_books(db, force=args.force, update_public_domain=True)
         print(f"Seed completed, inserted: {count}")
     finally:
         db.close()

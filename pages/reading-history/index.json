@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "阅读历史"
+  "navigationBarTitleText": "阅读历史",
+  "navigationBarBackgroundColor": "#fbf6ec",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#fbf6ec"
 }

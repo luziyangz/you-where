@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
 import json
 import re
 import secrets
@@ -24,6 +25,7 @@ from common.db import get_db_session
 from common.errors import ApiError
 from common.locks import acquire_named_locks
 from common.models import ActiveBookLock, ActivePairLock, Book, Entry, Pair, ReadMark, Reply, SessionModel, User
+from service import reading_service
 
 
 router = APIRouter(tags=["v2-core-reading"])
@@ -41,6 +43,12 @@ TEST_USERS = {
         "nickname": "测试用户B",
         "join_code": "900002",
     },
+}
+
+REVIEW_USER = {
+    "open_id": "youzainaye_review_user",
+    "nickname": "微信审核员",
+    "join_code": "900003",
 }
 
 
@@ -82,30 +90,12 @@ def _pair_stats(db: Session, pair_id: str) -> Dict[str, int]:
     return {"shared_books": int(shared_books), "shared_notes": int(shared_notes)}
 
 
-def _user_max_page(db: Session, book_id: str, user_id: str) -> int:
-    value = db.execute(select(func.max(Entry.page)).where(Entry.book_id == book_id, Entry.user_id == user_id)).scalar()
-    return int(value or 0)
-
-
 def _current_book(db: Session, pair_id: str) -> Optional[Book]:
     return db.execute(select(Book).where(and_(Book.pair_id == pair_id, Book.status == "reading")).order_by(desc(Book.created_at))).scalars().first()
 
 
 def _book_progress(db: Session, book: Book, user_id: str, partner_id: str) -> Dict[str, Any]:
-    my_progress = _user_max_page(db, book.book_id, user_id)
-    partner_progress = _user_max_page(db, book.book_id, partner_id)
-    return {
-        "book_id": book.book_id,
-        "title": book.title,
-        "author": book.author,
-        "total_pages": int(book.total_pages or 0),
-        "status": book.status,
-        "my_progress": my_progress,
-        "partner_progress": partner_progress,
-        "reading_days": calc_days_since(book.created_at),
-        "created_at": book.created_at,
-        "finished_at": book.finished_at,
-    }
+    return reading_service.book_progress(db, book, user_id, partner_id)
 
 
 class LoginPayload(BaseModel):
@@ -122,6 +112,11 @@ class PhoneLoginPayload(BaseModel):
 
 class TestLoginPayload(BaseModel):
     role: str = "a"
+
+
+class ReviewLoginPayload(BaseModel):
+    account: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=1, max_length=128)
 
 
 class AgreementPayload(BaseModel):
@@ -175,7 +170,15 @@ def _exchange_wechat_open_id(code: str, debug_open_id: Optional[str] = None) -> 
     payload = _fetch_json(f"https://api.weixin.qq.com/sns/jscode2session?{query}")
     open_id = str(payload.get("openid") or "").strip()
     if not open_id:
-        raise ApiError(40001, payload.get("errmsg") or "微信登录凭证无效，请重试", 400)
+        errcode = int(payload.get("errcode") or 0)
+        errmsg = str(payload.get("errmsg") or "").strip()
+        if errcode in {40029, 40163} or "invalid code" in errmsg.lower():
+            raise ApiError(
+                40001,
+                "微信登录凭证无效，请重新点击登录；如果持续出现，请确认服务器 WECHAT_APP_ID/WECHAT_APP_SECRET 与小程序 AppID 一致",
+                400,
+            )
+        raise ApiError(40001, errmsg or "微信登录凭证无效，请重试", 400)
     return open_id
 
 
@@ -289,6 +292,19 @@ def _prepare_test_user(db: Session, role: str) -> User:
     return user
 
 
+def _prepare_review_user(db: Session) -> User:
+    spec = REVIEW_USER
+    user = _get_or_create_user(db, spec["open_id"])
+    conflict = db.execute(select(User).where(User.join_code == spec["join_code"], User.user_id != user.user_id)).scalar_one_or_none()
+    if conflict:
+        conflict.join_code = _join_code(conflict.open_id + _utc_now())
+    user.nickname = spec["nickname"]
+    user.avatar = ""
+    user.join_code = spec["join_code"]
+    db.flush()
+    return user
+
+
 def _create_login_session(db: Session, user: User) -> Dict[str, Any]:
     token = _token()
     session = SessionModel(
@@ -342,6 +358,27 @@ def test_login(
     return ok(_create_login_session(db, user), request_id=request_id)
 
 
+@router.post("/auth/review-login")
+def review_login(
+    payload: ReviewLoginPayload,
+    request_id: str = Depends(get_request_id),
+    db: Session = Depends(get_db_session),
+):
+    if not settings.ENABLE_REVIEW_LOGIN:
+        raise ApiError(40404, "审核登录入口未启用", 404)
+    if not settings.WECHAT_REVIEW_PASSWORD:
+        raise ApiError(40404, "审核登录密码未配置", 404)
+
+    expected_account = settings.WECHAT_REVIEW_ACCOUNT or "reviewer"
+    account_ok = hmac.compare_digest((payload.account or "").strip(), expected_account)
+    password_ok = hmac.compare_digest(payload.password or "", settings.WECHAT_REVIEW_PASSWORD)
+    if not account_ok or not password_ok:
+        raise ApiError(40104, "审核账号或密码错误", 401)
+
+    user = _prepare_review_user(db)
+    return ok(_create_login_session(db, user), request_id=request_id)
+
+
 @router.post("/auth/accept-agreement")
 def accept_agreement(
     payload: AgreementPayload,
@@ -388,30 +425,9 @@ def me_stats(
     request_id: str = Depends(get_request_id),
     db: Session = Depends(get_db_session),
 ):
-    user_id = current_user["user_id"]
-    pair_ids = db.execute(
-        select(Pair.pair_id).where(Pair.status.in_(["active", "unbound"]), or_(Pair.user_a_id == user_id, Pair.user_b_id == user_id))
-    ).scalars().all()
+    from service import reading_service
 
-    total_books = 0
-    if pair_ids:
-        total_books = db.execute(
-            select(func.count(Book.book_id)).where(and_(Book.pair_id.in_(pair_ids), Book.status == "finished"))
-        ).scalar() or 0
-    page_rows = db.execute(
-        select(Entry.book_id, func.max(Entry.page).label("max_page")).where(Entry.user_id == user_id).group_by(Entry.book_id)
-    ).all()
-    total_pages = sum(int(row.max_page or 0) for row in page_rows)
-    total_entries = db.execute(select(func.count(Entry.entry_id)).where(Entry.user_id == user_id)).scalar() or 0
-    return ok(
-        {
-            "total_books": int(total_books),
-            "total_pages": int(total_pages),
-            "total_entries": int(total_entries),
-            "total_days": calc_days_since(current_user.get("created_at", "")),
-        },
-        request_id=request_id,
-    )
+    return ok(reading_service.get_current_user_stats(db, current_user), request_id=request_id)
 
 
 def home(
@@ -419,30 +435,9 @@ def home(
     request_id: str = Depends(get_request_id),
     db: Session = Depends(get_db_session),
 ):
-    pair = get_active_pair(db, current_user["user_id"])
-    result: Dict[str, Any] = {"user": current_user, "pair": None, "current_book": None}
-    if not pair:
-        return ok(result, request_id=request_id)
+    from service import reading_service
 
-    partner_id = get_partner_id(pair, current_user["user_id"])
-    partner = db.execute(select(User).where(User.user_id == partner_id)).scalar_one_or_none()
-    stats = _pair_stats(db, pair.pair_id)
-    result["pair"] = {
-        "pair_id": pair.pair_id,
-        "status": pair.status,
-        "bind_days": calc_days_since(pair.created_at),
-        "partner": {
-            "user_id": partner.user_id if partner else "",
-            "nickname": partner.nickname if partner else "书友",
-            "avatar": partner.avatar if partner else "",
-            "join_code": partner.join_code if partner else "",
-        },
-        **stats,
-    }
-    book = _current_book(db, pair.pair_id)
-    if book:
-        result["current_book"] = _book_progress(db, book, current_user["user_id"], partner_id)
-    return ok(result, request_id=request_id)
+    return ok(reading_service.get_home(db, current_user), request_id=request_id)
 
 
 def pair_current(
@@ -581,9 +576,9 @@ def book_entries(
     pair = get_active_pair(db, current_user["user_id"])
     if not pair or pair.pair_id != book.pair_id:
         raise ApiError(40302, "无权查看这本书", 403)
-    my_progress = _user_max_page(db, book_id, current_user["user_id"])
     partner_id = get_partner_id(pair, current_user["user_id"])
-    partner_progress = _user_max_page(db, book_id, partner_id)
+    my_progress = reading_service.effective_user_book_progress(db, book, current_user["user_id"])
+    partner_progress = reading_service.effective_user_book_progress(db, book, partner_id)
 
     total_entries = db.execute(select(func.count(Entry.entry_id)).where(Entry.book_id == book_id)).scalar() or 0
     offset = (page - 1) * page_size
@@ -737,7 +732,7 @@ def reply_entry(
     pair = get_active_pair(db, current_user["user_id"])
     if not pair or not book or pair.pair_id != book.pair_id:
         raise ApiError(40303, "无权回复这条笔记", 403)
-    my_progress = _user_max_page(db, entry.book_id, current_user["user_id"])
+    my_progress = reading_service.effective_user_book_progress(db, book, current_user["user_id"])
     if entry.user_id != current_user["user_id"] and int(entry.page) > my_progress:
         raise ApiError(40031, "这条笔记还未解锁，暂时不能回复", 400)
 

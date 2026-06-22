@@ -13,7 +13,9 @@ env/
 .idea/
 *.db
 *.sqlite3
-data/
+# 仅忽略 data 下的大文件/缓存；书目 JSON 必须打进镜像供 seed / prefetch 使用
+data/*
+!data/*.json
 archive/
 tests/
 test_*.py

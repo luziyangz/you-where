@@ -1,30 +1,224 @@
-<view class="container">
-  <view wx:if="{{loading}}" class="card">
-    <view class="title">正在加载正文...</view>
-    <view class="desc">首次打开会稍慢一些（需要拉取并缓存公版正文）</view>
+<wxs module="hl" src="./paraHl.wxs"></wxs>
+<view class="reader-page mode-{{readingMode}}">
+  <view wx:if="{{loading}}" class="reader-card loading-card">
+    <view class="loading-heart">♥</view>
+    <view class="title">正在为你翻开这一页</view>
+    <view class="desc">稍等一下，文字就像茶香一样慢慢铺开。</view>
   </view>
 
-  <view wx:elif="{{pageData}}" class="reader">
-    <view class="top">
-      <view class="book-title">{{pageData.title}}</view>
-      <view class="book-author">{{pageData.author}}</view>
-      <view class="pager">第 {{pageData.page}} / {{pageData.total_pages}} 页</view>
+  <view
+    wx:elif="{{pageData}}"
+    class="reader-shell reader-shell--warm {{pageTurnClass}} {{controlsVisible ? 'controls-on' : ''}}"
+    bindtouchstart="onTouchStart"
+    bindtouchend="onTouchEnd"
+  >
+    <view class="reader-paper-texture"></view>
+    <view class="brightness-mask" style="opacity: {{brightnessMaskOpacity}};"></view>
+    <view wx:if="{{cacheHint}}" class="cache-hint">{{cacheHint}}</view>
+    <canvas type="2d" id="readerMeasureCanvas" class="reader-measure-canvas"></canvas>
+    <view class="reader-top" wx:if="{{controlsVisible}}" catchtap="noop">
+      <view class="top-back" bindtap="onBack">‹</view>
+      <view>
+        <view class="book-title">{{pageData.title}}</view>
+        <view class="book-author">{{pageData.author || '作者未知'}}</view>
+      </view>
+      <view class="tool-buttons" catchtap="noop">
+        <view class="tool-btn" bindtap="onToggleCatalog">章节</view>
+        <view class="tool-btn tool-btn-soft" bindtap="onToggleSettings">字号</view>
+      </view>
     </view>
 
-    <scroll-view class="content" scroll-y enhanced>
-      <text class="text">{{pageData.content}}</text>
-    </scroll-view>
+    <view class="reader-content" bindtap="onScreenTap">
+      <block wx:for="{{pageSlices[sliceIndex].items}}" wx:key="lineKey">
+        <view
+          class="paragraph-wrap {{hl.style(highlightDetailMap, item.index) === 'underline' ? 'hl-underline' : ''}} {{hl.style(highlightDetailMap, item.index) === 'marker' ? 'hl-marker' : ''}} {{hl.hasNote(highlightDetailMap, item.index) ? 'hl-has-note' : ''}}"
+          style="font-size: {{fontSize}}rpx"
+          data-index="{{item.index}}"
+          bindlongpress="onParagraphLongPress"
+        >
+          <view
+            class="paragraph {{item.paraGapBefore ? 'para-gap-before' : ''}}"
+          >
+            {{item.text}}
+          </view>
+          <view wx:if="{{item.isParaStart && hl.hasNote(highlightDetailMap, item.index)}}" class="para-note-badge">备注</view>
+          <view wx:if="{{item.isParaEnd && hl.hasNote(highlightDetailMap, item.index)}}" class="para-note-body">
+            <text class="para-note-text">{{hl.note(highlightDetailMap, item.index)}}</text>
+          </view>
+        </view>
+      </block>
+    </view>
 
-    <view class="bottom">
-      <button class="btn" bindtap="onPrev" disabled="{{pageData.page <= 1}}">上一页</button>
-      <button class="btn primary" bindtap="onSyncProgress" loading="{{syncing}}">同步进度</button>
-      <button class="btn" bindtap="onNext" disabled="{{pageData.page >= pageData.total_pages}}">下一页</button>
+    <view class="reader-bottom" wx:if="{{controlsVisible}}" catchtap="noop">
+      <view class="reader-meta-bar">
+        <text class="reader-meta-main">共读 · 第 {{pageData.page}} / {{pageData.total_pages}} 页</text>
+        <text class="reader-meta-sub">本页 {{sliceIndex + 1}} / {{sliceTotal}} 屏</text>
+        <text wx:if="{{highlightCount > 0}}" class="reader-meta-extra">{{highlightCount}} 处摘抄</text>
+      </view>
+      <view class="progress-line">
+        <text>{{pageData.page}}</text>
+        <view class="progress-track-mini">
+          <view class="progress-fill-mini" style="width: {{(pageData.page / pageData.total_pages) * 100}}%"></view>
+        </view>
+        <text>{{pageData.total_pages}}</text>
+      </view>
+      <slider
+        class="progress-slider"
+        min="1"
+        max="{{pageData.total_pages}}"
+        step="1"
+        value="{{pageData.page}}"
+        activeColor="#c17f63"
+        backgroundColor="rgba(193, 127, 99, 0.2)"
+        block-color="#c17f63"
+        bindchanging="onProgressChanging"
+        bindchange="onProgressChange"
+      />
+      <view class="bottom-actions">
+        <button class="nav-btn" bindtap="onPrev" disabled="{{pageData.page <= 1}}">上一页</button>
+        <button class="sync-btn" bindtap="onSyncProgress" loading="{{syncing}}">记下共读进度</button>
+        <button class="nav-btn" bindtap="onNext" disabled="{{pageData.page >= pageData.total_pages}}">下一页</button>
+      </view>
+      <view class="bottom-tools">
+        <view bindtap="onToggleCatalog">章节与摘抄</view>
+        <view bindtap="onToggleSettings">阅读舒适设置</view>
+      </view>
+    </view>
+
+    <view class="reader-panel catalog-panel" wx:if="{{showCatalog}}" catchtap="noop">
+      <view class="panel-tabs">
+        <view class="panel-tab {{panelTab === 'catalog' ? 'active' : ''}}" data-tab="catalog" bindtap="onSwitchPanelTab">章节</view>
+        <view class="panel-tab {{panelTab === 'highlights' ? 'active' : ''}}" data-tab="highlights" bindtap="onSwitchPanelTab">摘抄本</view>
+      </view>
+      <scroll-view wx:if="{{panelTab === 'catalog'}}" class="catalog-list" scroll-y enhanced>
+        <view
+          wx:for="{{catalogItems}}"
+          wx:key="tocIdx"
+          class="catalog-item {{item.active ? 'active' : ''}}"
+          data-page="{{item.page}}"
+          bindtap="onGoCatalogPage"
+        >
+          <text>{{item.title}}</text>
+          <text>第 {{item.page}} 页</text>
+        </view>
+      </scroll-view>
+      <scroll-view wx:else class="catalog-list" scroll-y enhanced>
+        <view wx:if="{{!highlightItems.length}}" class="empty-hints">长按段落划重点或写备注，内容会保存到你的账号。</view>
+        <view
+          wx:for="{{highlightItems}}"
+          wx:key="id"
+          class="catalog-item catalog-item--hl"
+          data-page="{{item.page}}"
+          data-index="{{item.index}}"
+          bindtap="onGoCatalogPage"
+          bindlongpress="onHighlightLongPress"
+        >
+          <view class="hl-item-main">
+            <text class="hl-item-tag">{{item.styleLabel}}</text>
+            <text class="hl-item-preview">{{item.preview}}</text>
+          </view>
+          <text wx:if="{{item.note}}" class="hl-item-note">「{{item.note}}」</text>
+          <text class="hl-item-page">第 {{item.page}} 页</text>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="reader-panel settings-panel" wx:if="{{showSettings}}" catchtap="noop">
+      <view class="panel-title">阅读舒适设置</view>
+      <view class="setting-row">
+        <text>字号</text>
+        <view class="font-tools">
+          <button bindtap="onFontDecrease">A-</button>
+          <text>{{fontSize}}</text>
+          <button bindtap="onFontIncrease">A+</button>
+        </view>
+      </view>
+      <view class="mode-row">
+        <view class="mode-chip {{readingMode === 'paper' ? 'active' : ''}}" data-mode="paper" bindtap="onSetMode">暖纸</view>
+        <view class="mode-chip {{readingMode === 'focus' ? 'active' : ''}}" data-mode="focus" bindtap="onSetMode">静心</view>
+        <view class="mode-chip {{readingMode === 'night' ? 'active' : ''}}" data-mode="night" bindtap="onSetMode">夜灯</view>
+      </view>
+      <view class="setting-row brightness-row">
+        <text>亮度呵护</text>
+        <text>{{brightness}}%</text>
+      </view>
+      <slider
+        class="brightness-slider"
+        min="25"
+        max="100"
+        step="1"
+        value="{{brightness}}"
+        activeColor="#c17f63"
+        backgroundColor="rgba(193, 127, 99, 0.2)"
+        block-color="#c17f63"
+        bindchanging="onBrightnessChange"
+        bindchange="onBrightnessChange"
+      />
+    </view>
+
+    <!-- 阅读标注 -->
+    <view class="note-popup-mask" wx:if="{{showNotePopup}}" catchtap="onCloseNotePopup">
+      <view class="note-popup-sheet" catchtap="noop">
+        <view class="note-popup-title">添加阅读标注</view>
+        <view class="note-popup-desc">标注仅用于本书阅读记录；需要同步页码时可引用到进度记录。</view>
+        <view class="note-style-row">
+          <view
+            class="note-style-chip {{noteEditStyle === 'marker' ? 'on' : ''}}"
+            data-style="marker"
+            bindtap="onTapNoteStyleChip"
+          >温柔荧光</view>
+          <view
+            class="note-style-chip {{noteEditStyle === 'underline' ? 'on' : ''}}"
+            data-style="underline"
+            bindtap="onTapNoteStyleChip"
+          >细腻下划线</view>
+        </view>
+        <textarea
+          class="note-popup-input"
+          placeholder="写下摘要、关键词或阅读备注…"
+          placeholder-class="note-ph"
+          maxlength="500"
+          value="{{noteDraft}}"
+          bindinput="onNoteDraftInput"
+          auto-height
+          show-confirm-bar="{{false}}"
+        />
+        <view class="note-popup-actions">
+          <button class="note-btn-cancel" bindtap="onCloseNotePopup">稍后再写</button>
+          <button class="note-btn-ok" bindtap="onConfirmNotePopup">保存</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 引用原文到进度记录（留在阅读页） -->
+    <view class="note-popup-mask" wx:if="{{showQuoteJournalPopup}}" catchtap="onCloseQuoteJournalPopup">
+      <view class="note-popup-sheet quote-journal-sheet" catchtap="noop">
+        <view class="note-popup-title">引用到进度记录</view>
+        <view class="note-popup-desc">原文会作为阅读进度备注保存，仅在已绑定共读关系内可见。</view>
+        <view class="quote-journal-preview">
+          <view class="quote-journal-label">原文 · 第 {{quoteJournalPage}} 页</view>
+          <text class="quote-journal-text">“{{quoteJournalText}}”</text>
+        </view>
+        <textarea
+          class="note-popup-input"
+          placeholder="填写阅读备注，仅用于进度同步…"
+          placeholder-class="note-ph"
+          maxlength="200"
+          value="{{quoteJournalDraft}}"
+          bindinput="onQuoteJournalDraftInput"
+          auto-height
+          show-confirm-bar="{{false}}"
+        />
+        <view class="note-popup-actions">
+          <button class="note-btn-cancel" bindtap="onCloseQuoteJournalPopup">继续阅读</button>
+          <button class="note-btn-ok" loading="{{quoteJournalSubmitting}}" bindtap="onSubmitQuoteJournal">保存到记录</button>
+        </view>
+      </view>
     </view>
   </view>
 
-  <view wx:else class="card">
-    <view class="title">无法打开阅读</view>
-    <view class="desc">该书可能暂无可用正文</view>
+  <view wx:else class="reader-card">
+    <view class="title">暂时读不了这一本</view>
+    <view class="desc">这本书可能还没有正文，可以先回到书房看看别的。</view>
   </view>
 </view>
-

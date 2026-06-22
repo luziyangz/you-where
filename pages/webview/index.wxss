@@ -1,0 +1,37 @@
+.fallback {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48rpx;
+  background: #fbf6ec;
+  box-sizing: border-box;
+}
+
+.fallback-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #2d2822;
+}
+
+.fallback-desc {
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  line-height: 1.7;
+  color: #7c7164;
+  text-align: center;
+}
+
+.fallback-btn {
+  margin-top: 40rpx;
+  width: 320rpx;
+  border-radius: 999rpx;
+  background: #2d2822;
+  color: #fff8ed;
+  font-size: 28rpx;
+}
+
+.fallback-btn::after {
+  border: none;
+}

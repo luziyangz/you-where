@@ -61,6 +61,14 @@ global.wx = {
   showToast(options) {
     storage.latestToast = options || {};
   },
+  showModal(options) {
+    storage.latestModal = options || {};
+    if (typeof options.success === 'function') {
+      options.success({ confirm: false, cancel: true });
+    }
+  },
+  showLoading() {},
+  hideLoading() {},
   switchTab(options) {
     storage.latestSwitchTab = options && options.url;
   },
@@ -75,6 +83,12 @@ global.wx = {
     }
   },
   scanCode() {},
+  chooseMessageFile() {},
+  requirePrivacyAuthorize(options) {
+    if (options && typeof options.success === 'function') {
+      options.success();
+    }
+  },
   requestSubscribeMessage(options) {
     if (typeof options.success === 'function') {
       const templateId = (options.tmplIds || [])[0];
@@ -115,11 +129,10 @@ require.cache[requestPath] = {
         assert.ok(options.data.debug_open_id);
         return { token: 'token_wechat', user: { user_id: 'u_wechat', nickname: '微信用户', join_code: '111111' } };
       }
-      if (options.url === '/auth/phone-login') {
-        assert.strictEqual(options.data.code, 'wx_login_code');
-        assert.strictEqual(options.data.phone_code, 'phone_code_1');
-        assert.ok(options.data.debug_open_id);
-        return { token: 'token_phone', user: { user_id: 'u_phone', nickname: '手机号用户', join_code: '222222' } };
+      if (options.url === '/auth/review-login') {
+        assert.strictEqual(options.data.account, 'reviewer');
+        assert.strictEqual(options.data.password, 'review_password');
+        return { token: 'token_review', user: { user_id: 'u_review', nickname: '微信审核员', join_code: '900003' } };
       }
       return {};
     },
@@ -135,6 +148,7 @@ const app = {
 };
 
 global.getApp = () => app;
+global.getCurrentPages = () => [{ route: 'pages/bookstore/index' }];
 
 require.cache[copywritingPath] = {
   id: copywritingPath,
@@ -193,9 +207,9 @@ const assertRequest = (index, method, url) => {
   assert.strictEqual(app.globalData.token, 'token_wechat');
   assert.strictEqual(app.globalData.user.user_id, 'u_wechat');
 
-  await app.loginFlow({ method: 'phone', phoneCode: 'phone_code_1' });
-  assert.strictEqual(app.globalData.token, 'token_phone');
-  assert.strictEqual(app.globalData.user.user_id, 'u_phone');
+  await app.reviewLoginFlow('reviewer', 'review_password');
+  assert.strictEqual(app.globalData.token, 'token_review');
+  assert.strictEqual(app.globalData.user.user_id, 'u_review');
 
   app.syncReadingContext({
     user: { user_id: 'u_state_1', nickname: 'Me' },
@@ -216,7 +230,7 @@ const assertRequest = (index, method, url) => {
   app.globalData.token = '';
   app.globalData.user = null;
   storage.latestSwitchTab = '';
-  tabBar.switchTab.call(tabBar, { currentTarget: { dataset: { path: '/pages/bookstore/index', index: 2 } } });
+  tabBar.switchTab.call(tabBar, { currentTarget: { dataset: { path: '/pages/bookstore/index', index: 1 } } });
   assert.strictEqual(storage.latestSwitchTab, '');
   assert.strictEqual(storage.latestToast.title, '请先登录后使用');
   app.globalData.token = 'token_state';
@@ -246,8 +260,12 @@ const assertRequest = (index, method, url) => {
   await actualApi.saveReadingGoal({ period_days: 30, target_books: 2, target_days: 10 });
   await actualApi.fetchReminderConfig();
   await actualApi.saveReminderConfig({ enabled: true, remind_time: '21:00', timezone: 'Asia/Shanghai' });
+  await actualApi.fetchReaderOptions();
+  await actualApi.saveReaderOptions({ font_size: 30, reading_mode: 'paper', brightness: 88 });
   await actualApi.bindPair('654321');
+  await actualApi.respondPairRequest('pr_state_1', 'approve');
   await actualApi.unbindPair();
+  await actualApi.unbindPair({ force: true });
   await actualApi.fetchCurrentPair();
   await actualApi.fetchCurrentBook();
   await actualApi.createEntry({ book_id: 'b_state_1', page: 1, note_content: 'note' });
@@ -255,6 +273,16 @@ const assertRequest = (index, method, url) => {
   await actualApi.storeSearchBooks('', 1, 'history');
   await actualApi.storeGetBook('catalog_1');
   await actualApi.storeReadPage('catalog_1', 2);
+  await actualApi.storeGetMyShelf('recent', 1);
+  await actualApi.storeGetCatalogToc('catalog_1');
+  await actualApi.storeListCatalogMarks('catalog_1');
+  await actualApi.storeUpsertCatalogMark('catalog_1', {
+    page: 1,
+    para_index: 0,
+    style: 'marker',
+    note: '',
+    text_snap: 'snap'
+  });
 
   [
     ['GET', '/users/me'],
@@ -266,30 +294,42 @@ const assertRequest = (index, method, url) => {
     ['PUT', '/users/me/reading-goal'],
     ['GET', '/users/me/reminder-config'],
     ['PUT', '/users/me/reminder-config'],
+    ['GET', '/users/me/reader-options'],
+    ['PUT', '/users/me/reader-options'],
     ['POST', '/pairs'],
+    ['POST', '/pairs/requests/pr_state_1/respond'],
     ['DELETE', '/pairs/current'],
+    ['DELETE', '/pairs/current?force=true'],
     ['GET', '/pairs/current'],
     ['GET', '/pairs/current/books/current'],
     ['POST', '/books/b_state_1/entries'],
     ['PUT', '/books/b_state_1/read-mark'],
     ['GET', '/store/books?query=&page=1&category=history'],
     ['GET', '/store/books/catalog_1'],
-    ['GET', '/store/books/catalog_1/read?page=2']
+    ['GET', '/store/books/catalog_1/read?page=2'],
+    ['GET', '/store/my-shelf?tab=recent&page=1'],
+    ['GET', '/store/books/catalog_1/toc'],
+    ['GET', '/store/books/catalog_1/marks'],
+    ['PUT', '/store/books/catalog_1/marks']
   ].forEach(([method, url], index) => assertRequest(index, method, url));
-  assert.strictEqual(capturedRequests[13].data.book_id, undefined);
+
+  const legal = requireFromRoot('utils/legal-content.js');
+  assert.strictEqual(legal.LEGAL_META.contactEmail, '1185592106@qq.com');
 
   require.cache[apiPath] = {
     id: apiPath,
     filename: apiPath,
     loaded: true,
     exports: {
-      bindPair: async () => ({}),
+      bindPair: async () => ({ mode: 'pair_request', pair_request: { request_id: 'pr_bind' } }),
+      respondPairRequest: async () => ({ status: 'approved' }),
       fetchCurrentPair: async () => ({
         pair: {
           pair_id: 'p_state_1',
           partner: { nickname: 'Partner', avatar: '' },
           current_book: { book_id: 'b_state_1', title: 'State Book', total_pages: 120 }
-        }
+        },
+        pair_requests: []
       }),
       fetchMe: async () => ({ user_id: 'u_state_1', nickname: 'Me', avatar: '', join_code: '123456' }),
       fetchProfileMe: async () => ({ user: { user_id: 'u_state_1', nickname: 'Me', join_code: '123456' }, partner: null }),
@@ -306,6 +346,8 @@ const assertRequest = (index, method, url) => {
         }
       }),
       saveReminderConfig: async () => ({ reminder: { delivery_status: 'ready', template_id: 'tmpl_state', delivery_message: 'ready' } }),
+      storeSearchBooks: async () => ({ books: [], categories: [], has_more: false }),
+      storeGetMyShelf: async () => ({ books: [], has_more: false }),
       unbindPair: async () => ({})
     }
   };
@@ -331,6 +373,62 @@ const assertRequest = (index, method, url) => {
   partnerPage.onCopyMyJoinCode.call(partnerPage);
   assert.strictEqual(storage.latestClipboard, '123456');
 
+  requireFromRoot('pages/bookstore/index.js');
+  const bookstorePage = buildPageInstance(pageHolder.config);
+  app.globalData.token = 'token';
+  app.globalData.user = { user_id: 'u_state', nickname: '书友' };
+  storage.token = 'token';
+  let chooseMessageFileCalls = 0;
+  global.wx.chooseMessageFile = (opts) => {
+    chooseMessageFileCalls += 1;
+    if (opts && typeof opts.success === 'function') {
+      opts.success({
+        tempFiles: [{ path: 'wxfile://tmp_state_book.txt', name: 'state-book.txt', size: 2048 }]
+      });
+    }
+  };
+  global.wx.getPrivacySetting = (opts) => {
+    if (opts && typeof opts.success === 'function') {
+      opts.success({ needAuthorization: false, privacyContractName: '《小程序隐私保护指引》' });
+    }
+  };
+  global.wx.canIUse = () => true;
+  bookstorePage.refreshTxtAgreeSupport.call(bookstorePage);
+  assert.strictEqual(bookstorePage.data.supportTxtAgreeBtn, true);
+  assert.strictEqual(bookstorePage.data.txtNeedsPrivacyAuthorization, false);
+  assert.strictEqual(typeof bookstorePage._invokeTxtFilePicker, 'function');
+  bookstorePage._invokeTxtFilePicker.call(bookstorePage);
+  assert.strictEqual(bookstorePage.data.showTxtPopup, true);
+  assert.strictEqual(bookstorePage.data.txtFilePath, 'wxfile://tmp_state_book.txt');
+  assert.strictEqual(bookstorePage.data.txtForm.title, 'state-book');
+  assert.strictEqual(storage.latestModal.title, '确认导入 TXT');
+  assert.strictEqual(storage.latestModal.confirmText, '导入');
+  assert.strictEqual(app.globalData.__privacyResumeAction, '');
+  assert.strictEqual(typeof bookstorePage.onTapImportTxt, 'function');
+  bookstorePage.onCloseTxtPopup.call(bookstorePage);
+  bookstorePage.onTapImportTxt.call(bookstorePage);
+  assert.strictEqual(bookstorePage.data.showTxtPopup, true);
+  assert.strictEqual(bookstorePage.data.txtFilePath, 'wxfile://tmp_state_book.txt');
+  assert.strictEqual(app.globalData.__privacyResumeAction, '');
+  assert.strictEqual(typeof bookstorePage.onWxAgreeThenPickTxt, 'function');
+  bookstorePage.onWxAgreeThenPickTxt.call(bookstorePage, { detail: { errMsg: 'agreePrivacyAuthorization:ok' } });
+  assert.strictEqual(bookstorePage.data.showTxtPopup, true);
+  assert.strictEqual(app.globalData.__privacyResumeAction, '');
+  bookstorePage.onCloseTxtPopup.call(bookstorePage);
+  app.globalData.__privacyResumeAction = 'txt_import';
+  bookstorePage.onShow.call(bookstorePage);
+  assert.strictEqual(bookstorePage.data.txtPrivacyReadyHint, true);
+  assert.strictEqual(bookstorePage.data.showTxtPopup, false);
+  assert.ok(chooseMessageFileCalls >= 3);
+  const bookstoreWxml = fs.readFileSync(path.join(ROOT_DIR, 'pages/bookstore/index.wxml'), 'utf8');
+  assert.ok(bookstoreWxml.includes('supportTxtAgreeBtn && txtNeedsPrivacyAuthorization'));
+  assert.ok(bookstoreWxml.includes('open-type="agreePrivacyAuthorization"'));
+  assert.ok(bookstoreWxml.includes('bindtap="onTapImportTxt"'));
+
+  const appJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'app.json'), 'utf8'));
+  assert.strictEqual(appJson.__usePrivacyCheck__, true);
+  assert.strictEqual(appJson.requiredPrivateInfos, undefined);
+
   [
     'pages/bookstore/index.js',
     'pages/home/index.js',
@@ -338,10 +436,13 @@ const assertRequest = (index, method, url) => {
     'pages/profile/index.js',
     'pages/book-detail/index.js',
     'pages/reader/index.js',
+    'pages/circle/index.js',
     'pages/reading-history/index.js',
     'pages/reading-goal/index.js',
     'pages/reminder/index.js',
-    'pages/settings/index.js'
+    'pages/settings/index.js',
+    'pages/report/index.js',
+    'pages/webview/index.js'
   ].forEach((target) => {
     requireFromRoot(target);
   });

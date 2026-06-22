@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "共读摘录",
+  "navigationBarBackgroundColor": "#fbf6ec",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#fbf6ec",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

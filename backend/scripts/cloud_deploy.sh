@@ -2,8 +2,10 @@
 set -eu
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
-HTTP_PORT="${HTTP_PORT:-18080}"
+HTTP_PORT="${HTTP_PORT:-80}"
+HTTPS_PORT="${HTTPS_PORT:-443}"
 SERVER_IP="${SERVER_IP:-47.99.240.126}"
+SERVER_DOMAIN="${SERVER_DOMAIN:-www.nizaina.online}"
 CONFIGURE_DOCKER_MIRRORS="${CONFIGURE_DOCKER_MIRRORS:-1}"
 
 cd "$APP_DIR"
@@ -129,26 +131,66 @@ MYSQL_DB=you_where
 MYSQL_POOL_SIZE=10
 MYSQL_MAX_OVERFLOW=20
 HTTP_PORT=${HTTP_PORT}
-HTTPS_PORT=18443
+HTTPS_PORT=${HTTPS_PORT}
+SERVER_DOMAIN=${SERVER_DOMAIN}
 PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 WECHAT_APP_ID=
 WECHAT_APP_SECRET=
 WECHAT_REMINDER_TEMPLATE_ID=
-STORE_ENABLE_NETWORK=0
+STORE_ENABLE_NETWORK=1
 ENABLE_TEST_USERS=0
 SEED_TEST_USERS=0
 EOF
   chmod 600 .env
 }
 
+load_env_file() {
+  if [ ! -f .env ]; then
+    return
+  fi
+
+  set -a
+  . ./.env
+  set +a
+
+  HTTP_PORT="${HTTP_PORT:-80}"
+  HTTPS_PORT="${HTTPS_PORT:-443}"
+  SERVER_DOMAIN="${SERVER_DOMAIN:-www.nizaina.online}"
+}
+
 prepare_dirs() {
   mkdir -p nginx/certs nginx/logs
+}
+
+enable_ssl_if_cert_exists() {
+  CERT_FILE="nginx/certs/${SERVER_DOMAIN}.pem"
+  KEY_FILE="nginx/certs/${SERVER_DOMAIN}.key"
+  if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
+    log "SSL cert not found, keep HTTP-only gateway"
+    echo "Expected cert files:"
+    echo "  ${APP_DIR}/${CERT_FILE}"
+    echo "  ${APP_DIR}/${KEY_FILE}"
+    return
+  fi
+
+  log "Enabling HTTPS gateway for ${SERVER_DOMAIN}"
+  cp nginx/conf.d/ssl.conf.example nginx/conf.d/ssl.conf
 }
 
 deploy_stack() {
   log "Building and starting Docker stack"
   compose pull --ignore-pull-failures || true
   compose up -d --build
+}
+
+apply_schema_in_container() {
+  log "Verifying schema sync inside backend container"
+  if compose exec -T backend python scripts/apply_schema_updates.py; then
+    echo "Schema sync check: OK"
+  else
+    echo "WARN: schema sync failed. Run manually:" >&2
+    echo "  sudo docker compose exec backend python scripts/apply_schema_updates.py" >&2
+  fi
 }
 
 verify_health() {
@@ -172,13 +214,22 @@ verify_health() {
   log "Checking public endpoint from this server"
   if curl -fsS --connect-timeout 5 "http://${SERVER_IP}:${HTTP_PORT}/health" >/dev/null 2>&1; then
     echo "Public self-check OK: http://${SERVER_IP}:${HTTP_PORT}/health"
-    return
+  else
+    echo "WARN: local health is OK, but public self-check failed." >&2
+    echo "WARN: check Alibaba Cloud security group and OS firewall for TCP ${HTTP_PORT}." >&2
+    echo "WARN: some cloud networks do not support visiting the instance public IP from itself; verify from an external client too." >&2
+    compose ps >&2 || true
   fi
 
-  echo "WARN: local health is OK, but public self-check failed." >&2
-  echo "WARN: check Alibaba Cloud security group and OS firewall for TCP ${HTTP_PORT}." >&2
-  echo "WARN: some cloud networks do not support visiting the instance public IP from itself; verify from an external client too." >&2
-  compose ps >&2 || true
+  if [ -f nginx/conf.d/ssl.conf ]; then
+    log "Checking HTTPS domain endpoint"
+    if curl -fsS --connect-timeout 8 "https://${SERVER_DOMAIN}/health" >/dev/null 2>&1; then
+      echo "HTTPS OK: https://${SERVER_DOMAIN}/health"
+      echo "Production API base URL: https://${SERVER_DOMAIN}/api/v2"
+      return
+    fi
+    echo "WARN: HTTPS domain check failed. Verify DNS A record, certificate files, ICP status, and TCP ${HTTPS_PORT} security group." >&2
+  fi
 }
 
 need_root
@@ -187,6 +238,9 @@ install_docker_if_needed
 configure_docker_mirrors
 install_compose_if_needed
 ensure_env_file
+load_env_file
 prepare_dirs
+enable_ssl_if_cert_exists
 deploy_stack
+apply_schema_in_container
 verify_health

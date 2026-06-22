@@ -1,0 +1,28 @@
+# 本地 / CI 用 MySQL 测试实例（与生产 compose 隔离，端口 3307）
+services:
+  mysql_test:
+    image: mysql:8.0
+    container_name: you_where_mysql_test
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: test_root_pw
+      MYSQL_DATABASE: you_where_test
+      MYSQL_USER: you_where_test
+      MYSQL_PASSWORD: test_app_pw
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+      - ./scripts/mysql_init.sql:/docker-entrypoint-initdb.d/01_mysql_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -ptest_root_pw --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 25s
+
+volumes:
+  mysql_test_data:

@@ -1,0 +1,6 @@
+<web-view wx:if="{{safeUrl}}" src="{{safeUrl}}"></web-view>
+<view wx:else class="fallback">
+  <view class="fallback-title">无法打开页面</view>
+  <view class="fallback-desc">链接无效或未加入业务域名白名单。</view>
+  <button class="fallback-btn" bindtap="onBack">返回</button>
+</view>

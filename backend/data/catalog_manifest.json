@@ -1,0 +1,125 @@
+{
+  "books": [
+    {
+      "catalog_id": "manifest_db_weicheng",
+      "title": "围城",
+      "author": "钱钟书",
+      "douban_rating": "9.0",
+      "detail_url": "https://book.douban.com/subject/1068929/",
+      "placeholder_pages": 280,
+      "shelf_only": true,
+      "intro": "现代小说经典。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_xiaoxiao",
+      "title": "城南旧事",
+      "author": "林海音",
+      "douban_rating": "9.1",
+      "detail_url": "https://book.douban.com/subject/1057086/",
+      "placeholder_pages": 180,
+      "shelf_only": true,
+      "intro": "现代文学短篇集。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_huozhe",
+      "title": "活着",
+      "author": "余华",
+      "douban_rating": "9.4",
+      "detail_url": "https://book.douban.com/subject/4913064/",
+      "placeholder_pages": 280,
+      "shelf_only": true,
+      "intro": "当代文学代表作。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_santi",
+      "title": "三体",
+      "author": "刘慈欣",
+      "douban_rating": "8.9",
+      "detail_url": "https://book.douban.com/subject/2567698/",
+      "placeholder_pages": 320,
+      "shelf_only": true,
+      "intro": "科幻长篇。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_rensheng",
+      "title": "人生海海",
+      "author": "麦家",
+      "douban_rating": "8.1",
+      "detail_url": "https://book.douban.com/subject/33414176/",
+      "placeholder_pages": 300,
+      "shelf_only": true,
+      "intro": "当代小说。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_baiyexing",
+      "title": "白夜行",
+      "author": "东野圭吾",
+      "douban_rating": "9.2",
+      "detail_url": "https://book.douban.com/subject/3259440/",
+      "placeholder_pages": 380,
+      "shelf_only": true,
+      "intro": "推理长篇。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_bai_main",
+      "title": "百年孤独",
+      "author": "加西亚·马尔克斯",
+      "douban_rating": "9.3",
+      "detail_url": "https://book.douban.com/subject/6082808/",
+      "placeholder_pages": 360,
+      "shelf_only": true,
+      "intro": "拉美文学经典。多数版本受版权保护，站内不提供全文；可购买正版或导入电子版。"
+    },
+    {
+      "catalog_id": "manifest_db_xiaowangzi",
+      "title": "小王子",
+      "author": "圣埃克苏佩里",
+      "douban_rating": "9.1",
+      "detail_url": "https://book.douban.com/subject/1084336/",
+      "placeholder_pages": 120,
+      "shelf_only": true,
+      "intro": "童话短篇。推荐共读主题书目；如需站内阅读请导入正版电子版。"
+    },
+    {
+      "catalog_id": "manifest_db_renjian",
+      "title": "人间失格",
+      "author": "太宰治",
+      "douban_rating": "8.3",
+      "detail_url": "https://book.douban.com/subject/26982106/",
+      "placeholder_pages": 200,
+      "shelf_only": true,
+      "intro": "日本现代小说。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_huozai",
+      "title": "霍乱时期的爱情",
+      "author": "加西亚·马尔克斯",
+      "douban_rating": "9.0",
+      "detail_url": "https://book.douban.com/subject/4607783/",
+      "placeholder_pages": 400,
+      "shelf_only": true,
+      "intro": "爱情长篇。受版权保护，站内不提供全文；可购买正版或导入电子版。"
+    },
+    {
+      "catalog_id": "manifest_db_pin_fan",
+      "title": "平凡的世界",
+      "author": "路遥",
+      "douban_rating": "9.0",
+      "detail_url": "https://book.douban.com/subject/1205054/",
+      "placeholder_pages": 850,
+      "shelf_only": true,
+      "intro": "现实主义长篇。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    },
+    {
+      "catalog_id": "manifest_db_weicheng",
+      "title": "围城",
+      "author": "钱钟书",
+      "douban_rating": "9.0",
+      "detail_url": "https://book.douban.com/subject/1068929/",
+      "placeholder_pages": 280,
+      "shelf_only": true,
+      "intro": "现代小说经典。受版权保护，站内不提供全文；可购买正版或使用「导入 TXT」共读。"
+    }
+  ],
+  "_comment": "红楼梦、西游记等公版全书请使用 pg_* 书目（见 PUBLIC_DOMAIN_CATALOG_BOOKS），勿在此重复占位。"
+}

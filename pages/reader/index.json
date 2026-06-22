@@ -1,7 +1,8 @@
 {
   "usingComponents": {},
   "navigationBarTitleText": "阅读",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationBarBackgroundColor": "#fbf6ec",
+  "navigationBarTextStyle": "black",
+  "disableScroll": true
 }
 

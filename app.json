@@ -8,38 +8,41 @@
     "pages/reminder/index",
     "pages/settings/index",
     "pages/privacy-policy/index",
+    "pages/privacy-authorize/index",
     "pages/user-agreement/index",
     "pages/about-us/index",
     "pages/partner/index",
     "pages/bookstore/index",
     "pages/book-detail/index",
-    "pages/reader/index"
+    "pages/reader/index",
+    "pages/report/index",
+    "pages/webview/index"
   ],
   "window": {
-    "navigationBarTitleText": "你在哪页",
-    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTitleText": "你在哪里",
+    "navigationBarBackgroundColor": "#f6efe3",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#f7f7f7",
+    "backgroundColor": "#f6efe3",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
     "custom": true,
-    "color": "#999999",
-    "selectedColor": "#07c160",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
+    "color": "#8a7d6e",
+    "selectedColor": "#2d2822",
+    "backgroundColor": "#f6efe3",
+    "borderStyle": "white",
     "list": [
-      {
-        "pagePath": "pages/partner/index",
-        "text": "伙伴"
-      },
       {
         "pagePath": "pages/home/index",
         "text": "共读"
       },
       {
         "pagePath": "pages/bookstore/index",
-        "text": "书城"
+        "text": "书房"
+      },
+      {
+        "pagePath": "pages/progress/index",
+        "text": "我们的记录"
       },
       {
         "pagePath": "pages/profile/index",
@@ -48,5 +51,7 @@
     ]
   },
   "style": "v2",
-  "sitemapLocation": "sitemap.json"
+  "sitemapLocation": "sitemap.json",
+  "__usePrivacyCheck__": true,
+  "lazyCodeLoading": "requiredComponents"
 }

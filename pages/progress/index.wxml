@@ -1,218 +1,231 @@
-<view class="page-container">
-  <!-- 顶部导航 -->
-  <view class="glass-nav">
-    <view class="flex items-center gap-2">
-      <view class="nav-indicator"></view>
-      <text class="nav-title">你在哪页</text>
-    </view>
-    <view class="nav-more">
-      <view class="dot-icon"></view>
-    </view>
-  </view>
+<view class="journal-page">
+  <view class="page-bg"></view>
 
   <block wx:if="{{!book}}">
-    <view class="empty-content">
-      <view class="illustration-box">
-        <view class="icon-book-placeholder"></view>
-      </view>
+    <view class="empty-state">
+      <view class="eyebrow">我们的记录</view>
       <view class="empty-title">还没有正在共读的书</view>
-      <view class="empty-desc">先去首页添加一本书，再开始记录页码和想法吧。</view>
-      <button class="btn-primary w-full" bindtap="onBackHome">返回首页</button>
+      <view class="empty-desc">先和伙伴选定一本书，这里会用于同步页码、阅读状态和进度备注。</view>
+      <button class="btn-primary w-full" bindtap="onBackHome">回到共读首页</button>
     </view>
   </block>
 
   <block wx:else>
-    <view class="container">
-      <!-- 书籍进度卡片 -->
-      <view class="card book-progress-card">
-        <view class="book-header">
-          <view class="book-main">
-            <view class="status-tag">正在共读</view>
-            <view class="book-title">{{book.title}}</view>
-            <view class="book-author">{{book.author || '作者未填写'}}</view>
-          </view>
-          <view class="book-meta">
-            <text class="reading-days">第{{book.reading_days || 1}}天</text>
-            <text class="total-pages">共{{book.total_pages}}页</text>
-          </view>
-        </view>
+    <view class="page-head {{book.catalog_id ? 'page-head--reader' : ''}}" bindtap="onTapOpenPairReader">
+      <view>
+        <view class="eyebrow">我们的记录</view>
+        <view class="page-title">{{book.title}}</view>
+        <view class="page-desc">{{book.author || '作者未填写'}} · 第{{book.reading_days || 1}}天</view>
+        <view class="page-head-hint" wx:if="{{book.catalog_id}}">点此打开正文阅读</view>
+      </view>
+      <view class="book-seal">同读</view>
+    </view>
 
-        <view class="progress-section">
-          <view class="progress-header">
-            <text class="progress-title">阅读进度</text>
-            <text class="progress-diff">{{book.progress_summary}}</text>
+    <view class="relation-strip">
+      <view class="relation-duo">
+        <view class="relation-person">
+          <view class="avatar-mini me">
+            <block wx:if="{{user.avatar}}"><image src="{{user.avatar}}" mode="aspectFill"></image></block>
+            <block wx:else>{{userInitial}}</block>
           </view>
-          
-          <view class="progress-track">
-            <view class="progress-bar-partner" style="width: {{book.partner_progress_percent}}%"></view>
-            <view class="progress-bar-me" style="width: {{book.my_progress_percent}}%"></view>
-            
-            <view class="progress-marker" style="left: {{book.my_progress_percent}}%">
-              <view class="marker-avatar me-border">
-                <image src="{{user.avatar || 'https://picsum.photos/seed/yx_me/120/120'}}" mode="aspectFill"></image>
-              </view>
-              <view class="marker-label me-text">{{book.my_progress}}页</view>
-            </view>
-
-            <view class="progress-marker" style="left: {{book.partner_progress_percent}}%">
-              <view class="marker-avatar partner-border">
-                <image src="{{partner.avatar || 'https://picsum.photos/seed/yx_partner/120/120'}}" mode="aspectFill"></image>
-              </view>
-              <view class="marker-label partner-text">{{book.partner_progress}}页</view>
-            </view>
-          </view>
+          <text>{{user.nickname || '我'}} · {{book.my_progress}} 页</text>
         </view>
-
-        <view class="finish-status-box">
-          <view class="finish-chip {{book.my_finished ? 'done' : ''}}">
-            我{{book.my_finished ? '已读完' : '未读完'}}
+        <view class="relation-bridge"></view>
+        <view class="relation-person">
+          <view class="avatar-mini partner">
+            <block wx:if="{{partner.avatar}}"><image src="{{partner.avatar}}" mode="aspectFill"></image></block>
+            <block wx:else>{{partnerInitial}}</block>
           </view>
-          <view class="finish-chip {{book.partner_finished ? 'done' : ''}}">
-            伙伴{{book.partner_finished ? '已读完' : '未读完'}}
-          </view>
-        </view>
-        <view class="finish-tip" wx:if="{{book.my_finished && !book.partner_finished}}">
-          你已读完，等待伙伴完成后会自动归档到已读完列表
-        </view>
-        <view class="finish-tip success" wx:if="{{book.my_finished && book.partner_finished}}">
-          双方均已读完，本书将自动归档
+          <text>{{partner.nickname || 'TA'}} · {{book.partner_progress}} 页</text>
         </view>
       </view>
+      <view class="relation-strip-main">{{book.progress_summary}}</view>
+      <view class="relation-strip-meta">共 {{book.total_pages}} 页 · 第 {{book.reading_days || 1}} 天共读</view>
+      <view class="finish-tip" wx:if="{{book.my_finished && !book.partner_finished}}">你已读完，等伙伴完成后会自动归档。</view>
+      <view class="finish-tip success" wx:if="{{book.my_finished && book.partner_finished}}">你们都读完了，这本书会进入共同记忆。</view>
+    </view>
 
-      <!-- 共读笔记流 -->
-      <view class="section-header">
-        <view class="flex items-center gap-2">
-          <text class="section-title">共读笔记</text>
-          <text class="count-tag">({{entries.length}})</text>
-        </view>
-        <view class="header-actions">
-          <view class="locate-btn" wx:if="{{unreadCount > 0}}" bindtap="onLocateNextUnread">定位未读</view>
-          <view class="unread-badge" wx:if="{{unreadCount > 0}}">{{unreadCount}}条新动态</view>
-        </view>
+    <view class="action-card">
+      <view>
+        <view class="action-title">更新阅读进度</view>
+        <view class="action-desc">记录页码、阅读状态和备注，仅在已绑定共读关系内展示。</view>
       </view>
+      <button class="btn-primary w-full" bindtap="onOpenComposer">记一笔 / 更新进度</button>
+    </view>
 
-      <scroll-view class="notes-stream" scroll-y enhanced scroll-with-animation scroll-into-view="{{scrollIntoViewId}}">
-        <block wx:if="{{entries.length === 0}}">
-          <view class="empty-notes">
-            <text>还没有任何想法，点击下方按钮记一笔吧</text>
-          </view>
-        </block>
+    <view class="section-header">
+      <view>
+        <view class="section-title">进度记录</view>
+        <view class="section-desc">{{entries.length}} 条阅读进度</view>
+      </view>
+      <view class="locate-btn" wx:if="{{unreadCount > 0}}" bindtap="onLocateNextUnread">{{unreadCount}} 条未读更新</view>
+    </view>
 
-        <block wx:for="{{entries}}" wx:key="entry_id">
-          <view id="entry-{{item.entry_id}}" class="note-card {{item.is_mine ? 'note-me' : 'note-partner'}}">
-            <view class="note-header">
-              <view class="note-user-info">
-                <image class="note-avatar" src="{{item.avatar || '/assets/default-avatar.png'}}" mode="aspectFill"></image>
-                <view class="note-meta">
-                  <text class="note-username">{{item.nickname}}</text>
-                  <text class="note-page {{item.is_mine ? 'me-text' : 'partner-text'}}">第{{item.page}}页</text>
-                </view>
-              </view>
-              <text class="note-time">{{item.created_at}}</text>
-            </view>
+    <scroll-view class="notes-stream" scroll-y enhanced scroll-with-animation scroll-into-view="{{scrollIntoViewId}}">
+      <block wx:if="{{entries.length === 0}}">
+        <view class="empty-notes">还没有进度记录，先记录今天读到哪里。</view>
+      </block>
 
-            <view class="note-content-box {{item.is_locked ? 'note-locked' : ''}}" 
-                  bindtap="onTapEntryBody" 
-                  data-page="{{item.unlock_at_page}}" 
-                  data-is-locked="{{item.is_locked}}">
-              <block wx:if="{{item.is_locked}}">
-                <view class="lock-icon-box">
-                  <view class="icon-lock"></view>
-                </view>
-                <view class="lock-text">内容已锁定</view>
-                <view class="lock-hint">读到第 {{item.unlock_at_page}} 页即可解锁，避免被提前剧透。</view>
+      <block wx:for="{{entries}}" wx:key="entry_id">
+        <view id="entry-{{item.entry_id}}" class="note-card {{item.is_mine ? 'note-me' : 'note-partner'}}">
+          <view class="note-header">
+            <view class="note-user-info">
+              <block wx:if="{{item.avatar}}">
+                <image class="note-avatar" src="{{item.avatar}}" mode="aspectFill"></image>
               </block>
               <block wx:else>
-                <text class="note-text">{{item.note_content || '这一页没有写笔记内容，只更新了进度。'}}</text>
+                <view class="note-avatar note-avatar-text {{item.is_mine ? 'me' : 'partner'}}">{{item.entryInitial}}</view>
               </block>
+              <view class="note-meta">
+                <text class="note-username">{{item.nickname}}</text>
+                <text class="note-page">第{{item.page}}页</text>
+              </view>
             </view>
+            <text class="note-time">{{item.created_at}}</text>
+            <view
+              wx:if="{{!item.is_mine && !item.is_locked}}"
+              class="report-link"
+              catchtap="onReportEntry"
+              data-entry-id="{{item.entry_id}}"
+              data-user-id="{{item.user_id}}"
+              data-nickname="{{item.nickname}}"
+              data-snapshot="{{item.quote_text || item.note_content}}"
+            >反馈</view>
+          </view>
 
-            <!-- 回复列表 -->
-            <block wx:if="{{!item.is_locked}}">
-              <view class="note-footer">
-                <view class="reply-btn" bindtap="onOpenReplyPopup" data-entry-id="{{item.entry_id}}">
-                  <view class="icon-reply"></view>
-                  <text>回复</text>
-                </view>
+          <view
+            class="note-content-box {{item.is_locked ? 'note-locked' : ''}}"
+            bindtap="onTapEntryBody"
+            data-page="{{item.unlock_at_page}}"
+            data-is-locked="{{item.is_locked}}"
+          >
+            <block wx:if="{{item.is_locked}}">
+              <view class="lock-text">这一段先替你们收起来</view>
+              <view class="lock-hint">读到第 {{item.unlock_at_page}} 页即可解锁，避免提前剧透。</view>
+            </block>
+            <block wx:else>
+              <view wx:if="{{item.has_quote}}" class="quote-block">
+                <view class="quote-label">原文</view>
+                <text class="quote-text">“{{item.quote_text}}”</text>
               </view>
-              
-              <view class="replies-list" wx:if="{{item.replies && item.replies.length > 0}}">
-                <view class="reply-item" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="reply_id">
-                  <text class="reply-user">{{reply.nickname}}：</text>
-                  <text class="reply-content">{{reply.content}}</text>
-                </view>
+              <view wx:if="{{item.has_comment}}" class="note-comment">
+                <view class="note-comment-label" wx:if="{{item.has_quote}}">备注</view>
+                <text class="note-text">{{item.note_content}}</text>
               </view>
+              <text wx:if="{{!item.has_quote && !item.has_comment}}" class="note-text">这一页没有填写备注，只更新了进度。</text>
             </block>
           </view>
-        </block>
-        <view class="load-more-wrap" wx:if="{{entryHasMore}}">
-          <button class="btn-load-more" loading="{{entryLoadingMore}}" bindtap="onLoadMoreEntries">加载更多</button>
-        </view>
-      </scroll-view>
-    </view>
 
-    <!-- 底部操作栏 -->
-    <view class="bottom-action-bar">
-      <button class="btn-primary action-btn" bindtap="onOpenComposer">
-        <view class="icon-plus-white"></view>
-        <text>记一笔 / 更新进度</text>
-      </button>
-    </view>
+          <block wx:if="{{!item.is_locked}}">
+            <view class="note-footer">
+              <view class="reply-btn" bindtap="onOpenReplyPopup" data-entry-id="{{item.entry_id}}">
+                {{item.replies && item.replies.length ? '补充备注' : '添加补充备注'}}
+              </view>
+            </view>
+            <view class="reply-thread" wx:if="{{item.replies && item.replies.length > 0}}">
+              <view class="reply-thread-title">补充备注 · {{item.replies.length}} 条</view>
+              <view class="reply-item {{reply.is_mine ? 'reply-mine' : 'reply-partner'}}" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="reply_id">
+                <view class="reply-item-head">
+                  <view class="reply-avatar reply-avatar-text {{reply.is_mine ? 'me' : 'partner'}}">{{reply.replyInitial}}</view>
+                  <view class="reply-meta">
+                    <text class="reply-user">{{reply.nickname}}</text>
+                    <text class="reply-time">{{reply.created_at}}</text>
+                  </view>
+                  <view
+                    wx:if="{{!reply.is_mine}}"
+                    class="report-link"
+                    catchtap="onReportReply"
+                    data-reply-id="{{reply.reply_id}}"
+                    data-user-id="{{reply.user_id}}"
+                    data-nickname="{{reply.nickname}}"
+                    data-content="{{reply.content}}"
+                  >反馈</view>
+                </view>
+                <text class="reply-content">{{reply.content}}</text>
+              </view>
+            </view>
+          </block>
+        </view>
+      </block>
+
+      <view class="load-more-wrap" wx:if="{{entryHasMore}}">
+        <button class="btn-load-more" loading="{{entryLoadingMore}}" bindtap="onLoadMoreEntries">加载更多</button>
+      </view>
+    </scroll-view>
   </block>
 
-  <!-- 记一笔弹窗 -->
   <view class="modal-overlay" wx:if="{{showComposer}}" bindtap="onCloseComposer">
     <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">
-          <text class="modal-title">更新你的进度</text>
+          <text class="modal-title">更新阅读进度</text>
           <view class="close-icon" bindtap="onCloseComposer">×</view>
         </view>
-        
+
         <view class="composer-form">
           <view class="page-input-box">
-            <view class="input-row">
-              <input class="page-input" type="number" data-field="page" placeholder="{{book.my_progress || 0}}" value="{{entryForm.page}}" bindinput="onEntryFieldInput" />
-              <text class="total-pages-label">/ {{book.total_pages}}</text>
-            </view>
+            <input class="page-input" type="number" data-field="page" placeholder="{{book.my_progress || 0}}" value="{{entryForm.page}}" bindinput="onEntryFieldInput" />
+            <text class="total-pages-label">/ {{book.total_pages}}</text>
           </view>
 
-          <textarea class="note-textarea" data-field="note_content" maxlength="200" placeholder="在这里记录此刻的想法..." value="{{entryForm.note_content}}" bindinput="onEntryFieldInput"></textarea>
-          
+          <view wx:if="{{entryForm.quote_text}}" class="composer-quote">
+            <view class="composer-quote-head">
+              <text class="composer-quote-label">引用的原文</text>
+              <text class="composer-quote-clear" bindtap="onClearQuote">清除</text>
+            </view>
+            <text class="composer-quote-text">“{{entryForm.quote_text}}”</text>
+          </view>
+
+          <textarea
+            class="note-textarea"
+            data-field="note_content"
+            maxlength="200"
+            placeholder="阅读备注，仅用于共读进度记录"
+            value="{{entryForm.note_content}}"
+            bindinput="onEntryFieldInput"
+          ></textarea>
+
           <view class="finish-checkbox {{entryForm.mark_finished ? 'checked' : ''}}" bindtap="onToggleFinished">
             <view class="checkbox-icon"></view>
             <text>我已读完本书</text>
           </view>
 
           <view class="lock-warning" wx:if="{{entryForm.page > book.partner_progress}}">
-            <view class="icon-alert"></view>
-            <text>你已超过伙伴进度，笔记将被锁定。</text>
+            <text>你已超过对方进度，这条记录会先锁住，等对方读到后再打开。</text>
           </view>
         </view>
 
-        <button class="btn-primary modal-submit" loading="{{entrySubmitting}}" bindtap="onSubmitEntry">
-          同步给伙伴
-        </button>
+        <view class="lock-warning">
+          <text>该记录仅用于已绑定共读关系内的进度同步，不进入公共页面，也不向陌生人展示。</text>
+        </view>
+
+        <button class="btn-primary modal-submit" loading="{{entrySubmitting}}" bindtap="onSubmitEntry">保存进度</button>
       </view>
     </view>
   </view>
 
-  <!-- 回复弹窗 -->
   <view class="modal-overlay" wx:if="{{showReplyPopup}}" bindtap="onCloseReplyPopup">
     <view class="modal-content" catchtap="noop">
       <view class="modal-header-line"></view>
       <view class="modal-padding">
         <view class="modal-header">
-          <text class="modal-title">回复想法</text>
+          <text class="modal-title">补充阅读备注</text>
           <view class="close-icon" bindtap="onCloseReplyPopup">×</view>
         </view>
-        
-        <textarea class="reply-textarea" maxlength="200" placeholder="输入回复内容..." value="{{replyContent}}" bindinput="onReplyInput"></textarea>
 
-        <button class="btn-primary modal-submit" loading="{{replySubmitting}}" bindtap="onSubmitReply">
-          发送回复
-        </button>
+        <view wx:if="{{activeReplyQuote}}" class="reply-context quote-block">
+          <view class="quote-label">原文</view>
+          <text class="quote-text">“{{activeReplyQuote}}”</text>
+        </view>
+        <view wx:if="{{activeReplyNote}}" class="reply-context note-comment compact">
+          <view class="note-comment-label">对方备注</view>
+          <text class="note-text">{{activeReplyNote}}</text>
+        </view>
+
+        <textarea class="reply-textarea" maxlength="200" placeholder="添加一条补充备注…" value="{{replyContent}}" bindinput="onReplyInput"></textarea>
+
+        <button class="btn-primary modal-submit" loading="{{replySubmitting}}" bindtap="onSubmitReply">保存备注</button>
       </view>
     </view>
   </view>

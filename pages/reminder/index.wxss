@@ -1,46 +1,132 @@
-.page {
-  padding: 24rpx;
+/* 与「我的」资产页一致的温润纸感背景 */
+.asset-subpage {
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 48rpx 34rpx calc(48rpx + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 84% 6%, rgba(92, 143, 117, 0.14), transparent 220rpx),
+    linear-gradient(180deg, #fbf6ec 0%, #f3eadb 100%);
 }
 
-.card {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx;
+.subpage-head {
+  margin-bottom: 36rpx;
 }
 
-.row {
+.subpage-eyebrow {
+  display: inline-flex;
+  padding: 8rpx 18rpx;
+  border: 1rpx solid rgba(184, 92, 56, 0.24);
+  border-radius: 999rpx;
+  background: rgba(255, 251, 243, 0.72);
+  color: #a54f33;
+  font-size: 22rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+}
+
+.subpage-title {
+  margin-top: 22rpx;
+  color: #2d2822;
+  font-size: 44rpx;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.subpage-desc {
+  margin-top: 16rpx;
+  color: #7c7164;
+  font-size: 27rpx;
+  line-height: 1.65;
+}
+
+.state-text {
+  text-align: center;
+  color: #9a8e7e;
+  font-size: 28rpx;
+  padding: 80rpx 0;
+}
+
+.subpage-card {
+  margin-bottom: 24rpx;
+  padding: 8rpx 32rpx 28rpx;
+  border: 1rpx solid rgba(120, 98, 72, 0.14);
+  border-radius: 40rpx;
+  background: var(--paper-card, #fffbf3);
+  box-shadow: 0 18rpx 46rpx rgba(69, 47, 26, 0.06);
+  box-sizing: border-box;
+}
+
+.subpage-card--muted {
+  padding: 28rpx 32rpx;
+  background: rgba(255, 251, 243, 0.92);
+}
+
+.cell-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20rpx;
+  padding: 28rpx 0;
+  border-bottom: 1rpx solid rgba(231, 220, 203, 0.9);
 }
 
-.label {
-  margin-top: 12rpx;
-  margin-bottom: 8rpx;
-  font-size: 26rpx;
-  color: #333;
+.cell-row--noborder {
+  border-bottom: none;
 }
 
-.input {
-  border: 1rpx solid #e5e7eb;
-  border-radius: 12rpx;
-  padding: 16rpx;
-  font-size: 26rpx;
+.cell-label {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #2d2822;
+}
+
+.form-field {
+  padding-top: 28rpx;
+}
+
+.form-field:first-child {
+  padding-top: 20rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #2d2822;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 8rpx;
+  margin-bottom: 16rpx;
+  font-size: 24rpx;
+  color: #9a8e7e;
+  line-height: 1.4;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 112rpx;
+  padding: 28rpx 28rpx;
+  border-radius: 28rpx;
+  border: 1rpx solid rgba(231, 220, 203, 0.95);
+  background: rgba(251, 247, 239, 0.85);
+  font-size: 30rpx;
+  line-height: 44rpx;
+  color: #2d2822;
 }
 
 .status-tip {
-  margin-top: 18rpx;
-  padding: 16rpx;
-  border-radius: 12rpx;
-  background: #f7f8fa;
-  color: #6b7280;
-  font-size: 24rpx;
-  line-height: 1.5;
+  font-size: 26rpx;
+  color: #6b6358;
+  line-height: 1.55;
 }
 
-.btn {
-  margin-top: 28rpx;
-  background: #07c160;
-  color: #fff;
+/* 底部主操作：单列全宽，避免按钮贴在表单中段 */
+.subpage-actions {
+  margin-top: 12rpx;
+  padding-top: 8rpx;
+}
+
+.subpage-actions .btn-primary {
+  margin-top: 0;
 }

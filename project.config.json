@@ -1,5 +1,5 @@
 {
-  "appid": "wx92562a95605e74c2",
+  "appid": "wx401cfbd2f9e9c978",
   "compileType": "miniprogram",
   "libVersion": "trial",
   "packOptions": {
@@ -17,6 +17,14 @@
         "type": "folder"
       },
       {
+        "value": "backend",
+        "type": "folder"
+      },
+      {
+        "value": "team",
+        "type": "folder"
+      },
+      {
         "value": ".md",
         "type": "suffix"
       }
@@ -25,6 +33,7 @@
   },
   "setting": {
     "coverView": true,
+    "lazyloadPlaceholderEnable": true,
     "es6": true,
     "postcss": true,
     "minified": true,

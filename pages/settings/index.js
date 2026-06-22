@@ -1,4 +1,5 @@
 const { requireLogin } = require('../../utils/auth-gate');
+const { openReportPage } = require('../../utils/report-nav');
 
 Page({
   onShow() {
@@ -21,5 +22,9 @@ Page({
     wx.navigateTo({
       url: '/pages/about-us/index'
     });
+  },
+
+  onTapReport() {
+    openReportPage({ targetType: 'app', hint: '功能或服务投诉' });
   }
 });

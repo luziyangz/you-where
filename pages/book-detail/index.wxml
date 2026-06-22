@@ -1,25 +1,112 @@
-<view class="container">
-  <view wx:if="{{loading}}" class="card">
-    <view class="title">正在加载...</view>
+<view class="book-detail-page">
+  <view class="page-orb"></view>
+
+  <view wx:if="{{loading}}" class="book-card skeleton-card">
+    <view class="sk-line sk-title"></view>
+    <view class="sk-line sk-sub"></view>
+    <view class="sk-line sk-body"></view>
+    <view class="sk-line sk-body short"></view>
+    <view class="sk-actions">
+      <view class="sk-btn"></view>
+      <view class="sk-btn"></view>
+    </view>
   </view>
 
-  <view wx:elif="{{book}}" class="card">
-    <view class="header">
+  <view wx:elif="{{loadError}}" class="book-card">
+    <view class="title">加载失败</view>
+    <view class="desc">请检查网络或稍后重试。</view>
+    <button class="retry-btn" bindtap="onRetryLoadBook">重新加载</button>
+  </view>
+
+  <view wx:elif="{{book}}" class="book-card detail-card">
+    <view class="book-head">
       <image wx:if="{{book.cover_url}}" class="cover" mode="aspectFill" src="{{book.cover_url}}" />
+      <view wx:else class="cover cover-fallback">
+        <text>{{book.title}}</text>
+      </view>
       <view class="meta">
+        <view class="meta-head-row">
+          <view wx:if="{{book.category_label}}" class="category-pill">{{book.category_label}}</view>
+          <view wx:else class="category-pill category-pill--ghost">书城</view>
+          <view class="fav-chip {{favoriting ? 'fav-chip--busy' : ''}}" bindtap="onToggleFavorite">
+            <text class="fav-star">{{book.is_favorited ? '★' : '☆'}}</text>
+            <text class="fav-label">{{book.is_favorited ? '已收藏' : '收藏'}}</text>
+          </view>
+        </view>
         <view class="title">{{book.title}}</view>
         <view class="author">{{book.author || '作者未知'}}</view>
-        <view wx:if="{{book.category_label}}" class="desc">分类：{{book.category_label}}</view>
-        <view class="desc">
-          {{book.language ? ('语言：' + book.language + ' ｜ ') : ''}}{{book.has_text ? '可在线阅读（公版）' : '暂无正文'}}
-        </view>
-        <view wx:if="{{book.total_pages}}" class="desc">预计总页数：{{book.total_pages}}</view>
+        <view class="desc" wx:if="{{book.douban_rating}}">豆瓣参考 {{book.douban_rating}}</view>
+        <view class="desc">{{book.language ? ('语言：' + book.language + ' · ') : ''}}{{book.has_local_text ? '站内全书，可分页阅读' : (book.reader_mode === 'pager' ? '首次打开将下载全书到站内' : (book.reader_mode === 'external' ? '共读推荐，可复制链接或导入 TXT' : '暂无内置正文'))}}</view>
+        <view wx:if="{{book.total_pages}}" class="desc">预计 {{book.total_pages}} 页</view>
       </view>
     </view>
 
-    <view class="actions">
-      <button class="btn" bindtap="onStartRead" disabled="{{!book.has_text}}">开始阅读</button>
-      <button class="btn primary" bindtap="onAddToPair" loading="{{adding}}" disabled="{{!book.has_text}}">加入共读</button>
+    <view class="resume-banner" wx:if="{{book.reader_mode === 'pager' && book.read_action === 'continue' && book.reading_progress_page > 1}}">
+      <text class="resume-text">上次读到第 {{book.reading_progress_page}} 页</text>
+      <text class="resume-link" bindtap="onContinueReading">继续阅读</text>
+    </view>
+
+    <view class="toc-section" wx:if="{{book.reader_mode === 'pager'}}">
+      <view class="toc-bar" bindtap="onTapToggleToc">
+        <text class="section-title toc-bar-title">自动目录</text>
+        <text class="toc-chevron">{{tocExpanded ? '收起' : '展开'}}</text>
+      </view>
+      <view wx:if="{{tocExpanded}}" class="toc-body">
+        <view wx:if="{{tocLoading}}" class="toc-hint">正在解析章节标题…</view>
+        <view wx:elif="{{tocChapters.length >= 2}}" class="toc-list">
+          <view
+            wx:for="{{tocChapters}}"
+            wx:key="tocKey"
+            class="toc-row"
+            data-page="{{item.page}}"
+            bindtap="onTapTocChapter"
+          >
+            <text class="toc-row-title">{{item.title}}</text>
+            <text class="toc-row-page">第 {{item.page}} 页</text>
+          </view>
+          <view class="toc-footnote">由正文行首标题样式自动识别，仅供参考。</view>
+        </view>
+        <view wx:else class="toc-hint">未识别到足够章节标题，可在阅读器内使用分页目录。</view>
+      </view>
+    </view>
+
+    <view class="action-panel">
+      <button wx:if="{{book.reader_mode === 'pager'}}" class="read-action" bindtap="onStartRead">
+        <text class="action-main">{{book.read_action_label || '开始阅读'}}</text>
+        <text class="action-sub">{{book.read_action_sub || '先翻几页'}}</text>
+      </button>
+      <button wx:elif="{{book.reader_mode === 'external'}}" class="read-action read-action--external" bindtap="onOpenExternalRead">
+        <text class="action-main">打开阅读链接</text>
+        <text class="action-sub">小程序内或浏览器</text>
+      </button>
+      <button wx:else class="read-action read-action--disabled" disabled="true">
+        <text class="action-main">暂无内置正文</text>
+        <text class="action-sub">可尝试导入 TXT</text>
+      </button>
+      <button
+        class="pair-action {{book.pair_action === 'in_catalog' && book.pair_action !== 'rejoin' ? 'pair-action--muted' : ''}}"
+        bindtap="onPairAction"
+        loading="{{adding}}"
+        disabled="{{!book.can_add_to_pair}}"
+      >
+        <text class="action-main">{{book.pair_action_label || '加入共读'}}</text>
+        <text class="action-sub">{{book.pair_action_sub || '放进书桌'}}</text>
+      </button>
+    </view>
+
+    <view class="secondary-actions">
+      <button
+        wx:if="{{book.reader_mode === 'external'}}"
+        class="link-action"
+        bindtap="onCopyExternalRead"
+      >复制阅读链接</button>
+      <!-- 暂时隐藏：查看书籍参考页
+      <button
+        wx:if="{{book.detail_url}}"
+        class="link-action"
+        bindtap="onOpenDetailLink"
+      >查看书籍参考页</button>
+      -->
     </view>
 
     <view class="intro" wx:if="{{book.intro}}">
@@ -28,21 +115,19 @@
     </view>
 
     <view class="reviews" wx:if="{{book.quality_reviews && book.quality_reviews.length}}">
-      <view class="section-title">优质评价</view>
+      <view class="section-title">适合共读的理由</view>
       <view wx:for="{{book.quality_reviews}}" wx:key="index" class="review-item">
         <view class="review-head">
           <text class="reviewer">{{item.reviewer || '匿名读者'}}</text>
           <text class="rating">评分 {{item.rating || '--'}}</text>
-          <text class="quality-level" wx:if="{{item.quality_level}}">{{item.quality_level}}</text>
         </view>
         <view class="review-content">{{item.content}}</view>
       </view>
     </view>
   </view>
 
-  <view wx:else class="card">
+  <view wx:else class="book-card">
     <view class="title">未找到书籍</view>
-    <view class="desc">请返回书城重新搜索</view>
+    <view class="desc">请返回书房重新搜索。</view>
   </view>
 </view>
-

@@ -1,0 +1,43 @@
+<view class="report-page">
+  <view class="card">
+    <view class="title">问题反馈</view>
+    <view class="desc">如发现违法违规、侵权或不当内容，请如实填写。我们会在 24 小时内处理。</view>
+
+    <view class="target-box" wx:if="{{targetHint}}">
+      <view class="target-label">反馈对象</view>
+      <view class="target-text">{{targetHint}}</view>
+      <view class="target-preview" wx:if="{{targetPreview}}">{{targetPreview}}</view>
+    </view>
+
+    <view class="section-title">请选择原因</view>
+    <view class="reason-list">
+      <view
+        class="reason-item {{selectedReason === item.code ? 'is-active' : ''}}"
+        wx:for="{{reasons}}"
+        wx:key="code"
+        bindtap="onSelectReason"
+        data-code="{{item.code}}"
+      >{{item.label}}</view>
+    </view>
+
+    <view class="section-title">补充说明（选填）</view>
+    <textarea
+      class="desc-input"
+      maxlength="500"
+      placeholder="请描述问题，便于我们核实处理"
+      value="{{description}}"
+      bindinput="onDescInput"
+    ></textarea>
+
+    <button class="submit-btn" loading="{{submitting}}" disabled="{{!selectedReason || submitting}}" bindtap="onSubmit">提交反馈</button>
+
+    <view class="contact-box">
+      <view class="contact-title">也可通过邮箱投诉</view>
+      <view class="contact-row">
+        <text>{{contactEmail}}</text>
+        <text class="copy-link" bindtap="onCopyEmail">复制</text>
+      </view>
+      <view class="contact-time">{{serviceTime}}</view>
+    </view>
+  </view>
+</view>

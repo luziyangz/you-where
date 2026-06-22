@@ -15,6 +15,22 @@ const createBook = (payload) => {
   });
 };
 
+const requestBookSwitch = (payload) => {
+  return requestV2({
+    url: '/pairs/current/book-switch-requests',
+    method: 'POST',
+    data: payload
+  });
+};
+
+const respondBookSwitch = (requestId, action) => {
+  return requestV2({
+    url: `/pairs/current/book-switch-requests/${encodeURIComponent(requestId)}/respond`,
+    method: 'POST',
+    data: { action }
+  });
+};
+
 const fetchCurrentBook = () => {
   return requestV2({
     url: '/pairs/current/books/current',
@@ -46,6 +62,7 @@ const createEntry = (payload) => {
   const body = {
     page: payload.page,
     note_content: payload.note_content || '',
+    quote_text: payload.quote_text || '',
     mark_finished: !!payload.mark_finished,
     client_request_id: payload.client_request_id || makeClientRequestId()
   };
@@ -82,5 +99,7 @@ module.exports = {
   fetchCurrentBook,
   fetchHome,
   markBookEntriesRead,
-  replyEntry
+  replyEntry,
+  requestBookSwitch,
+  respondBookSwitch
 };

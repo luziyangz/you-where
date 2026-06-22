@@ -14,7 +14,7 @@ logger = logging.getLogger("youzainaye.v2")
 
 
 def create_app() -> FastAPI:
-    """创建主应用并挂载版本路由。"""
+    """创建主应用并挂载版本路由。仅 create_all，不 drop 表、不删库。"""
     Base.metadata.create_all(bind=engine)
     app = FastAPI(title="你在哪页 后端服务", version="2.0.0-skeleton")
     app.include_router(v2_router, prefix="/api/v2")

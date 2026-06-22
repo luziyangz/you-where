@@ -1,29 +1,49 @@
-<view class="page">
-  <view class="card">
-    <view class="progress-block">
-      <view class="progress-title">当前周期进度</view>
+<view class="asset-subpage">
+  <view class="subpage-head">
+    <view class="subpage-eyebrow">共读目标</view>
+    <view class="subpage-title">轻轻坚持的方向</view>
+    <view class="subpage-desc">周期与数字可以随时改，进度会在保存后刷新。</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="state-text">正在加载...</view>
+
+  <block wx:else>
+    <view class="subpage-card progress-card">
+      <view class="progress-card-title">当前周期进度</view>
       <view class="metric-row">
-        <text>完成书籍</text>
-        <text>{{progress.completed_books}} / {{progress.target_books}}</text>
+        <text class="metric-label">完成书籍</text>
+        <text class="metric-value">{{progress.completed_books}} / {{progress.target_books}}</text>
       </view>
-      <view class="progress-track">
-        <view class="progress-fill" style="width: {{progress.book_percent}}%"></view>
+      <view class="goal-track">
+        <view class="goal-fill" style="width: {{progress.book_percent}}%"></view>
       </view>
-      <view class="metric-row">
-        <text>打卡天数</text>
-        <text>{{progress.active_days}} / {{progress.target_days}}</text>
+      <view class="metric-row metric-row--spaced">
+        <text class="metric-label">打卡天数</text>
+        <text class="metric-value">{{progress.active_days}} / {{progress.target_days}}</text>
       </view>
-      <view class="progress-track">
-        <view class="progress-fill day" style="width: {{progress.day_percent}}%"></view>
+      <view class="goal-track goal-track--last">
+        <view class="goal-fill goal-fill--day" style="width: {{progress.day_percent}}%"></view>
       </view>
     </view>
 
-    <view class="label">周期天数</view>
-    <input class="input" type="number" value="{{period_days}}" bindinput="onInputPeriod" />
-    <view class="label">目标书籍数</view>
-    <input class="input" type="number" value="{{target_books}}" bindinput="onInputBooks" />
-    <view class="label">目标打卡天数</view>
-    <input class="input" type="number" value="{{target_days}}" bindinput="onInputDays" />
-    <button class="btn" loading="{{saving}}" bindtap="onSave">保存目标</button>
-  </view>
+    <view class="subpage-card">
+      <view class="section-cap">编辑目标</view>
+      <view class="form-field">
+        <text class="form-label">周期天数</text>
+        <input class="form-input" type="number" placeholder="例如 30" value="{{period_days}}" bindinput="onInputPeriod" />
+      </view>
+      <view class="form-field">
+        <text class="form-label">目标书籍数</text>
+        <input class="form-input" type="number" placeholder="本周期内希望读完的本数" value="{{target_books}}" bindinput="onInputBooks" />
+      </view>
+      <view class="form-field form-field--last">
+        <text class="form-label">目标打卡天数</text>
+        <input class="form-input" type="number" placeholder="希望有多少天留下记录" value="{{target_days}}" bindinput="onInputDays" />
+      </view>
+    </view>
+
+    <view class="subpage-actions">
+      <button class="btn-primary w-full" loading="{{saving}}" bindtap="onSave">保存目标</button>
+    </view>
+  </block>
 </view>

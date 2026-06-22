@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "共读目标"
+  "navigationBarTitleText": "共读目标",
+  "navigationBarBackgroundColor": "#fbf6ec",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#fbf6ec"
 }

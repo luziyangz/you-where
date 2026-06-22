@@ -6,6 +6,7 @@ USER_NAME="${USER_NAME:-root}"
 SSH_PORT="${SSH_PORT:-22}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/you-where-backend}"
 KEY_PATH="${KEY_PATH:-}"
+SERVER_DOMAIN="${SERVER_DOMAIN:-www.nizaina.online}"
 SKIP_DEPLOY="${SKIP_DEPLOY:-0}"
 
 case "$REMOTE_DIR" in
@@ -40,7 +41,8 @@ tar -czf "$PACKAGE_PATH" \
   --exclude='.deploy' \
   --exclude='__pycache__' \
   --exclude='.pytest_cache' \
-  --exclude='data' \
+  --exclude='data/*.db' \
+  --exclude='data/*.sqlite3' \
   --exclude='nginx/logs' \
   -C "$BACKEND_DIR" .
 
@@ -53,7 +55,7 @@ fi
 
 REMOTE_COMMAND="set -eu; sudo mkdir -p '$REMOTE_DIR'; sudo tar -xzf /tmp/you-where-backend.tar.gz -C '$REMOTE_DIR'; cd '$REMOTE_DIR'"
 if [ "$SKIP_DEPLOY" != "1" ]; then
-  REMOTE_COMMAND="$REMOTE_COMMAND; sudo sh scripts/cloud_deploy.sh"
+  REMOTE_COMMAND="$REMOTE_COMMAND; sudo env SERVER_IP='$SERVER' SERVER_DOMAIN='$SERVER_DOMAIN' sh scripts/cloud_deploy.sh"
 fi
 
 echo "[sync] Running remote deploy command"
@@ -63,4 +65,4 @@ else
   ssh -p "$SSH_PORT" "$TARGET" "$REMOTE_COMMAND"
 fi
 
-echo "[sync] Finished. Health URL: http://${SERVER}:18080/health"
+echo "[sync] Finished. Health URL: https://${SERVER_DOMAIN}/health"

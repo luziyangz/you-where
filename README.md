@@ -7,7 +7,7 @@
 
 ## 快速启动（后端）
 1. 配置环境变量：`DB_BACKEND=mysql`、`MYSQL_HOST`、`MYSQL_PORT`、`MYSQL_USER`、`MYSQL_PASSWORD`、`MYSQL_DB`
-2. 配置微信登录环境变量：`WECHAT_APP_ID`、`WECHAT_APP_SECRET`
+2. 配置微信登录环境变量：`WECHAT_APP_ID`、`WECHAT_APP_SECRET`。`WECHAT_APP_ID` 必须与 `project.config.json` 中的 `appid` 保持一致，否则微信 `code2session` 会返回 `invalid code`。
 3. 如需真实打卡提醒投递，配置订阅消息模板：`WECHAT_REMINDER_TEMPLATE_ID`
 4. 初始化表结构：`python backend/scripts/init_mysql_schema.py`
 5. 已有数据库升级结构：`python backend/scripts/apply_schema_updates.py`
@@ -22,24 +22,28 @@
 
 ## 阿里云 Docker 部署
 - 部署说明：见 `backend/deploy_guide.md`。
-- 当前未备案域名 `www.nizaina.com` 在大陆云服务器会被拦截，开发联调先使用 `http://47.99.240.126:18080/api/v2`。
+- 当前生产 API 域名：`https://www.nizaina.online/api/v2`。
+- 部署前需要在阿里云 DNS 添加 `www.nizaina.online -> 47.99.240.126` 的 A 记录，并在安全组放行 `80/tcp`、`443/tcp`。
+- SSL 证书放到 `backend/nginx/certs/www.nizaina.online.pem` 和 `backend/nginx/certs/www.nizaina.online.key` 后，部署脚本会自动启用 HTTPS。
 - Windows 一键同步并部署：`powershell -ExecutionPolicy Bypass -File backend\scripts\sync_to_aliyun.ps1 -Server 47.99.240.126 -User root`
 - 云端手动部署：进入 `/opt/you-where-backend` 后执行 `sudo sh scripts/cloud_deploy.sh`。
-- 正式小程序上线前仍必须补齐“已备案域名 + HTTPS + 微信后台 request 合法域名”。
+- 正式小程序上线前必须在微信公众平台配置 request 合法域名：`https://www.nizaina.online`。
 
 ## 登录能力
-- 小程序首页提供微信一键登录与手机号登录两种入口。
-- 真实微信登录和手机号登录依赖后端环境变量 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`。
+- 小程序当前仅提供微信一键登录入口。
+- 真实微信登录依赖后端环境变量 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`。
+- 微信审核账号密码登录通过 `ENABLE_REVIEW_LOGIN`、`WECHAT_REVIEW_ACCOUNT`、`WECHAT_REVIEW_PASSWORD` 控制，仅在开发版/体验版显示入口。
 - 本地开发者工具或本地 API 地址会发送 `debug_open_id`，用于不接入微信后台时联调。
-- 手机号登录使用小程序 `getPhoneNumber` 返回的 `code`，后端通过微信 `getuserphonenumber` 接口换取手机号。
 - 测试用户不展示在小程序界面；如需本地绑定测试，可在后端测试环境启用 `ENABLE_TEST_USERS=1` 后调用 `POST /api/v2/auth/test-login`。
 - 测试用户会和真实用户一样写入 `users`、`sessions`，绑定后写入正式配对链路；MySQL/生产环境默认关闭测试用户入口。
 - 云端开发如只需要让真实用户绑定测试用户，可执行 `docker compose exec backend python scripts/seed_test_users.py` 写入隐藏测试用户；固定共读码为 `900001` / `900002`。
 
 ## 书城能力
-- 书城默认使用本地中文分类书库，支持国外名著、历史、心学、玄学术数、中医经络、国学经典等分类。
+- 书城默认接入中文公版全文书库，首批使用 Project Gutenberg / Gutendex 元数据，支持《西游记》《红楼梦》《三国志演义》《儒林外史》等整本书。
+- 书籍正文不直接写入仓库；首次打开详情或正文时由后端拉取公开纯文本并缓存到数据库，之后可在小程序内分页阅读、收藏、加入共读。
 - `GET /api/v2/store/books` 支持 `query`、`page`、`category` 查询参数。
-- Gutendex 外部英文书库同步默认关闭；如确需开启，设置环境变量 `STORE_ENABLE_NETWORK=1`。
+- Gutendex 外部公版书库同步默认开启；如需关闭，设置环境变量 `STORE_ENABLE_NETWORK=0`。
+- 旧的导读/节选类 `builtin_*` 书目仍保留兼容历史数据，但不再作为书城主列表展示。
 
 ## 打卡提醒
 - 前端保存提醒时会在存在 `WECHAT_REMINDER_TEMPLATE_ID` 的情况下申请微信订阅消息授权。

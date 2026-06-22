@@ -5,6 +5,8 @@ from fastapi import APIRouter
 from api.v2.rest_aliases import router as rest_aliases_router
 from api.v2.core_reading import router as core_reading_router
 from api.v2.store_reading import router as store_reading_router
+from api.v2.feed import router as feed_router
+from api.v2.reports import router as reports_router
 
 
 router = APIRouter(tags=["v2"])
@@ -13,6 +15,8 @@ logger = logging.getLogger("youzainaye.v2")
 router.include_router(store_reading_router)
 router.include_router(core_reading_router)
 router.include_router(rest_aliases_router)
+router.include_router(feed_router)
+router.include_router(reports_router)
 
 
 @router.get("/_ping")

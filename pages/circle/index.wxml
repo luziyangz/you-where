@@ -1,0 +1,10 @@
+<view class="circle-page">
+  <view class="page-bg"></view>
+  <view class="page-orb"></view>
+
+  <view class="empty-panel">
+    <view class="empty-title">功能暂不可用</view>
+    <view class="empty-desc">当前页面未开放，请返回首页继续使用阅读进度功能。</view>
+    <button class="btn-primary w-full" bindtap="onGoHome">返回首页</button>
+  </view>
+</view>

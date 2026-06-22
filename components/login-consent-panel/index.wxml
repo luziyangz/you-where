@@ -1,0 +1,32 @@
+<!-- 登录前合规：微信隐私授权 + 用户协议与隐私政策确认 -->
+<view class="consent-panel">
+  <view wx:if="{{needWxPrivacy}}" class="wx-privacy-card">
+    <view class="wx-privacy-title">隐私保护提示</view>
+    <view class="wx-privacy-desc">根据微信平台要求，使用登录等功能前需同意 {{privacyContractName}}。</view>
+    <button class="btn-privacy-contract" plain bindtap="onOpenWxPrivacyContract">查看完整隐私指引</button>
+    <button
+      wx:if="{{supportAgreeBtn}}"
+      class="btn-privacy-agree"
+      plain
+      open-type="agreePrivacyAuthorization"
+      bindagreeprivacyauthorization="onWxPrivacyAgreed"
+    >同意并继续</button>
+    <button
+      wx:else
+      class="btn-privacy-agree"
+      plain
+      bindtap="onFallbackWxPrivacyAgree"
+    >同意并继续</button>
+  </view>
+
+  <view class="terms-row" bindtap="toggleTerms">
+    <view class="checkbox {{agreedTerms ? 'checkbox-on' : ''}}" aria-role="checkbox" aria-checked="{{agreedTerms}}"></view>
+    <view class="terms-text">
+      <text>我已阅读并同意</text>
+      <text class="link" catchtap="goUserAgreement">《用户协议》</text>
+      <text>与</text>
+      <text class="link" catchtap="goPrivacyPolicy">《隐私政策》</text>
+    </view>
+  </view>
+  <view wx:if="{{!agreedTerms}}" class="terms-hint">请先勾选同意上述协议后再登录</view>
+</view>

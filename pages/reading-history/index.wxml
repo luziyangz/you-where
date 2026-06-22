@@ -1,13 +1,46 @@
-<view class="page">
-  <view wx:if="{{loading && !items.length}}" class="empty">正在加载...</view>
-  <view wx:elif="{{!items.length}}" class="empty">还没有阅读历史</view>
-  <block wx:else>
-    <view wx:for="{{items}}" wx:key="book_id" class="item">
-      <view class="title">{{item.title}}</view>
-      <view class="meta">{{item.author || '作者未知'}} · {{item.my_progress}} / {{item.total_pages}} 页</view>
-      <view class="meta">状态：{{item.status === 'finished' ? '已读完' : '共读中'}}</view>
+<view class="asset-subpage">
+  <view class="subpage-head">
+    <view class="subpage-eyebrow">阅读历史</view>
+    <view class="subpage-title">你们读过的书</view>
+    <view class="subpage-desc">按时间汇集已关联的书籍与进度，便于回顾共读足迹。</view>
+  </view>
+
+  <view wx:if="{{loading && !items.length}}" class="state-text">正在加载...</view>
+
+  <view wx:elif="{{!items.length}}" class="empty-panel">
+    <view class="empty-title">还没有阅读历史</view>
+    <view class="empty-desc">绑定伙伴并开启第一本书后，共读足迹会出现在这里。</view>
+    <view class="empty-actions">
+      <button class="btn-primary w-full" bindtap="onGoBookstore">去主题书房选书</button>
     </view>
-    <view wx:if="{{loading}}" class="more">加载中...</view>
-    <view wx:elif="{{!hasMore}}" class="more">没有更多了</view>
+  </view>
+
+  <block wx:else>
+    <view class="history-list">
+      <view
+        wx:for="{{items}}"
+        wx:key="book_id"
+        class="history-card"
+        hover-class="history-card--active"
+        bindtap="onOpenHistoryBook"
+        data-book-id="{{item.book_id}}"
+        data-catalog-id="{{item.catalog_id}}"
+      >
+        <view class="history-main">
+          <view class="history-title">{{item.title}}</view>
+          <view class="history-meta">{{item.author || '作者未知'}} · 和 {{item.partner_nickname || '对方'}} 共读 · {{item.my_progress}} / {{item.total_pages}} 页</view>
+        </view>
+        <view class="history-side">
+          <view class="status-pill status-pill--{{item.display_status || 'unfinished'}}">
+            {{item.display_label || '未读完'}}
+          </view>
+          <view class="history-chevron"></view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="list-foot">加载中...</view>
+    <view wx:elif="{{!hasMore}}" class="list-foot list-foot--end">没有更多了</view>
+    <view wx:else class="list-foot">上拉加载更多</view>
   </block>
 </view>

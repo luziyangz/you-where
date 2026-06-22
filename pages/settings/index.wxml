@@ -23,6 +23,14 @@
       <view class="setting-text">关于我们</view>
       <view class="arrow-right"></view>
     </view>
+
+    <view class="setting-item" bindtap="onTapReport">
+      <view class="setting-icon bg-orange">
+        <view class="icon-flag"></view>
+      </view>
+      <view class="setting-text">问题反馈</view>
+      <view class="arrow-right"></view>
+    </view>
   </view>
 
   <view class="version-info">

@@ -22,6 +22,12 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from common.db_safety import (  # noqa: E402
+    assert_destructive_db_allowed,
+    assert_safe_identifier,
+    assert_safe_table_name,
+)
+
 
 TABLES: Tuple[str, ...] = (
     "users",
@@ -57,14 +63,17 @@ def get_mysql_conn() -> pymysql.Connection:
 
 
 def fetch_rows(sqlite_conn: sqlite3.Connection, table: str) -> Iterable[sqlite3.Row]:
-    cur = sqlite_conn.execute(f"SELECT * FROM {table}")
+    safe_table = assert_safe_table_name(table)
+    cur = sqlite_conn.execute(f"SELECT * FROM {safe_table}")
     return cur.fetchall()
 
 
 def clear_mysql_table(mysql_conn: pymysql.Connection, table: str) -> None:
-    # 为了保证可重复执行迁移，先清空目标表再导入。
+    # 为了保证可重复执行迁移，先清空目标表再导入（仅白名单表名，且需显式允许破坏性库）。
+    assert_destructive_db_allowed(f"migrate 清空表 {table}")
+    safe_table = assert_safe_table_name(table)
     with mysql_conn.cursor() as cur:
-        cur.execute(f"DELETE FROM {table}")
+        cur.execute(f"DELETE FROM {safe_table}")
 
 
 def insert_rows(mysql_conn: pymysql.Connection, table: str, rows: Iterable[sqlite3.Row]) -> int:
@@ -74,8 +83,11 @@ def insert_rows(mysql_conn: pymysql.Connection, table: str, rows: Iterable[sqlit
 
     columns = list(rows[0].keys())
     placeholders = ",".join(["%s"] * len(columns))
+    safe_table = assert_safe_table_name(table)
+    for col in columns:
+        assert_safe_identifier(col, kind="列名")
     columns_sql = ",".join(columns)
-    sql = f"INSERT INTO {table} ({columns_sql}) VALUES ({placeholders})"
+    sql = f"INSERT INTO {safe_table} ({columns_sql}) VALUES ({placeholders})"
     values = [tuple(row[col] for col in columns) for row in rows]
 
     with mysql_conn.cursor() as cur:

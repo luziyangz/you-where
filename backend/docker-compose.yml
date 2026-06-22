@@ -46,7 +46,11 @@ services:
       WECHAT_APP_ID: ${WECHAT_APP_ID:-}
       WECHAT_APP_SECRET: ${WECHAT_APP_SECRET:-}
       WECHAT_REMINDER_TEMPLATE_ID: ${WECHAT_REMINDER_TEMPLATE_ID:-}
+      ENABLE_REVIEW_LOGIN: ${ENABLE_REVIEW_LOGIN:-0}
+      WECHAT_REVIEW_ACCOUNT: ${WECHAT_REVIEW_ACCOUNT:-reviewer}
+      WECHAT_REVIEW_PASSWORD: ${WECHAT_REVIEW_PASSWORD:-}
       STORE_ENABLE_NETWORK: ${STORE_ENABLE_NETWORK:-0}
+      STORE_PREFETCH_CONTENT: ${STORE_PREFETCH_CONTENT:-1}
       ENABLE_TEST_USERS: ${ENABLE_TEST_USERS:-0}
       SEED_TEST_USERS: ${SEED_TEST_USERS:-0}
       TZ: Asia/Shanghai
@@ -57,8 +61,8 @@ services:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()\""]
       interval: 15s
       timeout: 5s
-      retries: 8
-      start_period: 30s
+      retries: 12
+      start_period: 90s
     networks:
       - you_where_net
 
@@ -67,8 +71,8 @@ services:
     container_name: you_where_nginx
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-18080}:80"
-      - "${HTTPS_PORT:-18443}:443"
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro

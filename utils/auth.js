@@ -16,6 +16,17 @@ const getOrCreateDebugOpenId = () => {
 };
 
 const shouldUseDebugIdentity = () => {
+  // 正式版必须使用真实微信登录态，禁止携带 debug_open_id，以符合微信平台规范与审核要求
+  try {
+    const accountInfo = wx.getAccountInfoSync && wx.getAccountInfoSync();
+    const env = accountInfo && accountInfo.miniProgram && accountInfo.miniProgram.envVersion;
+    if (env === 'release') {
+      return false;
+    }
+  } catch (error) {
+    // ignore
+  }
+
   try {
     const systemInfo = wx.getSystemInfoSync && wx.getSystemInfoSync();
     if (systemInfo && systemInfo.platform === 'devtools') {
@@ -27,7 +38,7 @@ const shouldUseDebugIdentity = () => {
 
   try {
     const app = getApp && getApp();
-    const baseUrl = app && app.globalData && app.globalData.apiBaseUrl || '';
+    const baseUrl = (app && app.globalData && app.globalData.apiBaseUrl) || '';
     return /https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(baseUrl);
   } catch (error) {
     return false;
@@ -61,25 +72,36 @@ const persistSession = (data) => {
   return data;
 };
 
-const login = async () => {
-  const code = await wxLogin();
-  const data = await request({
-    url: '/auth/login',
-    method: 'POST',
-    data: buildLoginPayload(code)
-  });
-  return persistSession(data);
+const isInvalidWechatCodeError = (error) => {
+  const message = String((error && error.message) || '');
+  return error && Number(error.code) === 40001 && /invalid code|登录凭证|code/i.test(message);
 };
 
-const phoneLogin = async ({ phoneCode, debugPhoneNumber } = {}) => {
+const login = async (options = {}) => {
   const code = await wxLogin();
+  try {
+    const data = await request({
+      url: '/auth/login',
+      method: 'POST',
+      data: buildLoginPayload(code)
+    });
+    return persistSession(data);
+  } catch (error) {
+    if (!options.retryOnInvalidCode || !isInvalidWechatCodeError(error)) {
+      throw error;
+    }
+    return login({ retryOnInvalidCode: false });
+  }
+};
+
+const reviewLogin = async ({ account, password } = {}) => {
   const data = await request({
-    url: '/auth/phone-login',
+    url: '/auth/review-login',
     method: 'POST',
-    data: buildLoginPayload(code, {
-      phone_code: phoneCode || '',
-      debug_phone_number: debugPhoneNumber || ''
-    })
+    data: {
+      account: account || '',
+      password: password || ''
+    }
   });
   return persistSession(data);
 };
@@ -98,7 +120,7 @@ const restoreSession = () => {
 
 module.exports = {
   login,
-  phoneLogin,
+  reviewLogin,
   clearSession,
   restoreSession
 };
